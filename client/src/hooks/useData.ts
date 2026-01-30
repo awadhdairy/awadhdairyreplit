@@ -1,16 +1,13 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import { supabase } from '@/lib/supabase';
-import { getStoredSession } from '@/lib/supabase';
 import {
   fetchCattle, fetchProduction, fetchCustomers, fetchProducts,
   fetchRoutes, fetchDeliveries, fetchInvoices, fetchExpenses,
   fetchEmployees, fetchInventory, fetchEquipment, fetchHealthRecords,
   fetchBreedingRecords, getDashboardStats,
-  DEMO_CATTLE, DEMO_CUSTOMERS, DEMO_PRODUCTS, DEMO_ROUTES
+  DEMO_CATTLE, DEMO_CUSTOMERS, DEMO_PRODUCTS, DEMO_ROUTES, demoStore, isDemo
 } from '@/lib/api';
 import type { Cattle, Customer, Product, MilkProduction, Delivery, Invoice, HealthRecord, BreedingRecord } from '@shared/types';
-
-const isDemo = () => getStoredSession()?.startsWith('demo-');
 
 export function useCattle() {
   return useQuery({
@@ -258,18 +255,15 @@ export function useAddCustomer() {
     mutationFn: async (customer: Partial<Customer>) => {
       if (isDemo()) {
         const newCustomer = { id: `demo-${Date.now()}`, created_at: new Date().toISOString(), ...customer } as Customer;
+        demoStore.addCustomer(newCustomer);
         return newCustomer;
       }
       const { data, error } = await supabase.from('customers').insert(customer).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      if (isDemo() && data) {
-        queryClient.setQueryData(['customers'], (old: Customer[] | undefined) => [...(old || []), data]);
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['customers'] });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -280,19 +274,17 @@ export function useUpdateCustomer() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Customer> & { id: string }) => {
-      if (isDemo()) return { id, ...updates } as Customer;
+      if (isDemo()) {
+        demoStore.updateCustomer(id, updates);
+        return { id, ...updates } as Customer;
+      }
       const { data, error } = await supabase.from('customers').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: (data) => {
-      if (isDemo() && data) {
-        queryClient.setQueryData(['customers'], (old: Customer[] | undefined) => 
-          (old || []).map(c => c.id === data.id ? { ...c, ...data } : c)
-        );
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['customers'] });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
 }
@@ -359,7 +351,18 @@ export function useAddInvoice() {
   
   return useMutation({
     mutationFn: async (invoice: Partial<Invoice>) => {
-      if (isDemo()) return { id: `demo-${Date.now()}`, invoice_number: `AWD-${Date.now()}`, ...invoice };
+      if (isDemo()) {
+        const newInvoice = { 
+          id: `demo-${Date.now()}`, 
+          invoice_number: invoice.invoice_number || `AWD-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`,
+          payment_status: 'pending' as const,
+          paid_amount: 0,
+          created_at: new Date().toISOString(),
+          ...invoice 
+        } as Invoice;
+        demoStore.addInvoice(newInvoice);
+        return newInvoice;
+      }
       const { data, error } = await supabase.from('invoices').insert(invoice).select().single();
       if (error) throw error;
       return data;
@@ -367,6 +370,27 @@ export function useAddInvoice() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useUpdateInvoice() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: { id: string } & Partial<Invoice>) => {
+      if (isDemo()) {
+        demoStore.updateInvoice(id, updates);
+        return { id, ...updates };
+      }
+      const { data, error } = await supabase.from('invoices').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['invoices'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
     },
   });
 }

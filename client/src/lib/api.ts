@@ -6,7 +6,52 @@ import type {
   Equipment, Route
 } from '@shared/types';
 
-const isDemo = () => getStoredSession()?.startsWith('demo-');
+export const isDemo = () => getStoredSession()?.startsWith('demo-');
+
+// Mutable demo data store for in-session persistence
+class DemoDataStore {
+  private invoices: Invoice[] = [];
+  private customers: Customer[] = [];
+  private initialized = false;
+
+  initialize(invoices: Invoice[], customers: Customer[]) {
+    if (!this.initialized) {
+      this.invoices = [...invoices];
+      this.customers = [...customers];
+      this.initialized = true;
+    }
+  }
+
+  getInvoices(): Invoice[] {
+    return this.invoices;
+  }
+
+  addInvoice(invoice: Invoice) {
+    this.invoices = [...this.invoices, invoice];
+  }
+
+  updateInvoice(id: string, updates: Partial<Invoice>) {
+    this.invoices = this.invoices.map(inv => 
+      inv.id === id ? { ...inv, ...updates } : inv
+    );
+  }
+
+  getCustomers(): Customer[] {
+    return this.customers;
+  }
+
+  addCustomer(customer: Customer) {
+    this.customers = [...this.customers, customer];
+  }
+
+  updateCustomer(id: string, updates: Partial<Customer>) {
+    this.customers = this.customers.map(c => 
+      c.id === id ? { ...c, ...updates } : c
+    );
+  }
+}
+
+export const demoStore = new DemoDataStore();
 
 export const DEMO_CATTLE: Cattle[] = [
   { id: '1', tag_number: 'AWD-001', name: 'Lakshmi', breed: 'Gir', date_of_birth: '2020-03-15', cattle_type: 'cow', status: 'active', lactation_status: 'lactating', weight: 450, lactation_number: 3, created_at: new Date().toISOString() },
@@ -132,7 +177,10 @@ export async function fetchProduction(): Promise<MilkProduction[]> {
 }
 
 export async function fetchCustomers(): Promise<Customer[]> {
-  if (isDemo()) return DEMO_CUSTOMERS;
+  if (isDemo()) {
+    demoStore.initialize(DEMO_INVOICES, DEMO_CUSTOMERS);
+    return demoStore.getCustomers();
+  }
   const { data, error } = await supabase.from('customers').select('*').order('name');
   if (error) throw error;
   return data || [];
@@ -160,7 +208,10 @@ export async function fetchDeliveries(): Promise<Delivery[]> {
 }
 
 export async function fetchInvoices(): Promise<Invoice[]> {
-  if (isDemo()) return DEMO_INVOICES;
+  if (isDemo()) {
+    demoStore.initialize(DEMO_INVOICES, DEMO_CUSTOMERS);
+    return demoStore.getInvoices();
+  }
   const { data, error } = await supabase.from('invoices').select('*').order('invoice_date', { ascending: false });
   if (error) throw error;
   return data || [];
