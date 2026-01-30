@@ -28,8 +28,8 @@ import { DataTable, Column, Action } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer } from "@/hooks/useData";
-import type { Customer, SubscriptionType } from "@shared/types";
+import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer, useInvoices } from "@/hooks/useData";
+import type { Customer, SubscriptionType, Invoice } from "@shared/types";
 
 // Sample data
 const sampleCustomers: Customer[] = [
@@ -103,15 +103,20 @@ const sampleCustomers: Customer[] = [
 
 const areas = ["Sector 12", "Model Town", "Civil Lines", "Main Market", "Garden Colony", "Industrial Area"];
 
+interface CustomerWithBalance extends Customer {
+  calculatedCredit: number;
+}
+
 export default function CustomersPage() {
   const { data: customersData, isLoading } = useCustomers();
+  const { data: invoicesData } = useInvoices();
   const addCustomerMutation = useAddCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomerMutation = useDeleteCustomer();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
-  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithBalance | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({
@@ -125,16 +130,34 @@ export default function CustomersPage() {
     notes: "",
   });
 
-  const customers = customersData || [];
+  const invoices = invoicesData || [];
+
+  // Calculate credit balance dynamically from invoices for each customer
+  const customers: CustomerWithBalance[] = useMemo(() => {
+    const rawCustomers = customersData || [];
+    return rawCustomers.map(customer => {
+      // Calculate outstanding amount from invoices
+      const customerInvoices = invoices.filter(inv => inv.customer_id === customer.id);
+      const totalBilled = customerInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
+      const totalPaid = customerInvoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0);
+      const calculatedCredit = totalBilled - totalPaid;
+      
+      return {
+        ...customer,
+        calculatedCredit,
+        credit_balance: calculatedCredit, // Override with calculated value
+      };
+    });
+  }, [customersData, invoices]);
 
   const stats = useMemo(() => ({
     total: customers.length,
     active: customers.filter((c) => c.is_active).length,
-    credit: customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0),
+    credit: customers.reduce((sum, c) => sum + (c.calculatedCredit || 0), 0),
     advance: customers.reduce((sum, c) => sum + (c.advance_balance || 0), 0),
   }), [customers]);
 
-  const columns: Column<Customer>[] = [
+  const columns: Column<CustomerWithBalance>[] = [
     {
       key: "name",
       header: "Customer",
@@ -176,7 +199,7 @@ export default function CustomersPage() {
       header: "Credit Due",
       sortable: true,
       render: (item) => {
-        const balance = item.credit_balance || 0;
+        const balance = item.calculatedCredit || 0;
         return (
           <span className={balance > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
             ₹{balance.toLocaleString("en-IN")}
@@ -208,7 +231,7 @@ export default function CustomersPage() {
     },
   ];
 
-  const actions: Action<Customer>[] = [
+  const actions: Action<CustomerWithBalance>[] = [
     {
       label: "View Details",
       onClick: (item) => {
@@ -599,7 +622,7 @@ export default function CustomersPage() {
                   <div className="p-3 rounded-lg border">
                     <p className="text-sm text-muted-foreground">Credit Balance</p>
                     <p className="font-medium text-red-600">
-                      ₹{selectedCustomer.credit_balance.toLocaleString("en-IN")}
+                      ₹{(selectedCustomer.calculatedCredit || 0).toLocaleString("en-IN")}
                     </p>
                   </div>
                   <div className="p-3 rounded-lg border">
