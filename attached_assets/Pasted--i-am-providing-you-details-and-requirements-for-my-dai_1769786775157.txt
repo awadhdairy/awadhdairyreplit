@@ -1,0 +1,1661 @@
+ i am providing you details and requirements for my dairy management software ERP requirements "AWADH DAIRY"; i want it fully functional , industry grade, very optimised ;Real product, daily use , long term sustainable. make fully functional webapp (no feature should loose, no shortcuts) every feature must be implemented properly. create in stage wise manner.. gradually check implementation at each step yourself. AWADH DAIRY - Complete Technical Blueprint
+
+For deployment on Vercel (Frontend) + Supabase (Backend) (i will  provide credentials to connect external supabase , directly integrate with that only)
+
+1. PROJECT OVERVIEW
+
+1.1 Application Summary
+
+Build a comprehensive Dairy Farm & Milk Distribution Management System.
+
+Staff Portal - Full comprehensive management dashboard for dairy operations
+
+
+
+1.2 Technology Stack
+
+
+
+Backend: Supabase (PostgreSQL + Auth + RLS)
+
+Charts: Recharts
+
+PDF Generation: jsPDF + jspdf-autotable
+
+Excel Export: xlsx, pdf, csv
+
+Animations: Framer Motion
+
+Date Handling: date-fns
+
+Hosting: Vercel (frontend) + Supabase (backend)
+
+Mobile: Capacitor (optional native app wrapper)
+
+2. AUTHENTICATION SYSTEM
+
+2.1 Custom 6 digit PIN-Based Authentication (Supabase Auth)
+
+Staff Authentication Flow:
+
+Login Screen: Phone number (10 digits) + 6-digit PIN
+
+Session Management: Custom auth_sessions table with 7-day expiration
+
+Rate Limiting: auth_attempts table locks after 5 failed attempts for 15 minutes
+
+PIN Storage: bcrypt hashing via PostgreSQL pgcrypto extension
+
+
+
+2.2 Database Tables for Auth
+
+-- Staff profiles
+
+CREATE TABLE profiles (
+
+id uuid PRIMARY KEY,
+
+full_name text NOT NULL,
+
+phone text UNIQUE NOT NULL,
+
+role user_role NOT NULL,
+
+pin_hash text, -- bcrypt hash
+
+is_active boolean DEFAULT true,
+
+avatar_url text,
+
+created_at timestamptz DEFAULT now(),
+
+updated_at timestamptz DEFAULT now()
+
+);
+
+-- User roles enum
+
+CREATE TYPE user_role AS ENUM (
+
+'super_admin', 'manager', 'accountant',
+
+'delivery_staff', 'farm_worker', 'vet_staff', 'auditor'
+
+);
+
+-- Session tokens
+
+CREATE TABLE auth_sessions (
+
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+user_id uuid NOT NULL,
+
+session_token text UNIQUE NOT NULL,
+
+user_type text DEFAULT 'staff', -- 'staff' or 'customer'
+
+expires_at timestamptz NOT NULL,
+
+last_activity timestamptz DEFAULT now(),
+
+created_at timestamptz DEFAULT now(),
+
+ip_address text,
+
+user_agent text
+
+);
+
+-- Rate limiting
+
+CREATE TABLE auth_attempts (
+
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+phone text UNIQUE NOT NULL,
+
+failed_count int DEFAULT 0,
+
+last_attempt timestamptz DEFAULT now(),
+
+locked_until timestamptz
+
+);
+
+-- Customer accounts (separate from staff) (can be created only by admin / manager / accountant)
+
+CREATE TABLE customer_accounts (
+
+id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+
+customer_id uuid REFERENCES customers(id),
+
+phone text UNIQUE NOT NULL,
+
+pin_hash text,
+
+user_id uuid, -- links to auth_sessions
+
+2.3 Required RPC Functions
+
+-- Staff login
+
+CREATE FUNCTION staff_login(_phone text, _pin text) RETURNS json;
+
+-- Session validation
+
+CREATE FUNCTION validate_session(_session_token text) RETURNS json;
+
+-- Admin creates staff
+
+CREATE FUNCTION admin_create_staff(_session_token text, _full_name text, _phone text, _pin text, _role user_role) RETURNS json;
+
+-- Admin deletes staff
+
+CREATE FUNCTION admin_delete_staff_v2(_session_token text, _target_user_id uuid) RETURNS json;
+
+-- Customer auth functions
+
+CREATE FUNCTION customer_login(_phone text, _pin text) RETURNS json;
+
+CREATE FUNCTION customer_register(_name text, _phone text, _pin text) RETURNS json;
+
+CREATE FUNCTION customer_change_pin(_session_token text, _current_pin text, _new_pin text) RETURNS json;
+
+CREATE FUNCTION validate_customer_session(_session_token text) RETURNS json;
+
+3. ROLE-BASED ACCESS CONTROL (RBAC)
+
+3.1 Seven User Roles
+
+Role Access Level
+
+super_admin Full access to all modules + user management
+
+manager Same as super_admin except user deletion
+
+accountant Billing, Invoices, Expenses, Reports, Employees (payroll)
+
+delivery_staff Deliveries, Bottles, Customer info (read)
+
+farm_worker Cattle, Production, Health, Breeding, Inventory, Equipment
+
+vet_staff Health records, Breeding, Cattle (read)
+
+auditor Read-only access to all data for auditing
+
+3.2 Role-Based Dashboard
+
+Each role sees a customized dashboard:
+
+AdminDashboard: Full stats, all charts, quick actions
+
+DeliveryDashboard: Delivery stats, pending deliveries, route info
+
+FarmDashboard: Production stats, cattle status, health alerts
+
+AccountantDashboard: Revenue, expenses, pending payments
+
+VetDashboard: Health records, breeding calendar, upcoming vaccinations
+
+AuditorDashboard: Read-only overview of all operations
+
+4. STAFF PORTAL MODULES
+
+4.1 Dashboard (/dashboard)
+
+Features:
+
+Welcome message with user name and current date
+
+Role badge display
+
+Quick action buttons (context-aware based on role)
+
+Stat cards: Today's Production, Active Cattle, Total Customers, Monthly Revenue
+
+Charts:
+
+7-Day Production Trend (Area chart)
+
+Revenue Growth (Line chart)
+
+Expense Breakdown (Pie chart)
+
+Cattle Composition (Donut chart)
+
+Delivery Performance (Bar chart)
+
+Month-over-Month Comparison
+
+Customer Growth
+
+Procurement vs Production
+
+Cards:
+
+Recent Activity feed
+
+Breeding Alerts Panel (heat detection, upcoming calvings, overdue vaccinations)
+
+Delivery Automation status
+
+Expense Automation status
+
+4.2 Cattle Management (/cattle)
+
+Features:
+
+CRUD for cattle records
+
+Stats cards: Total, Lactating, Pregnant, Dry counts
+
+Searchable/sortable data table
+
+Status badges (active, sold, deceased, dry)
+
+Lactation status badges (lactating, dry, pregnant, calving)
+
+Pedigree tracking (Sire/Dam selection)
+
+Milk history dialog per cattle
+
+Pedigree tree visualization
+
+Database Table:
+
+CREATE TABLE cattle (
+
+id uuid PRIMARY KEY,
+
+tag_number text UNIQUE NOT NULL,
+
+name text,
+
+breed text NOT NULL,
+
+cattle_type text DEFAULT 'cow', -- cow, buffalo
+
+date_of_birth date,
+
+status cattle_status DEFAULT 'active', -- active, sold, deceased, dry
+
+lactation_status lactation_status DEFAULT 'dry', -- lactating, dry, pregnant, calving
+
+weight numeric,
+
+sire_id uuid REFERENCES cattle(id),
+
+dam_id uuid REFERENCES cattle(id),
+
+lactation_number int DEFAULT 0,
+
+last_calving_date date,
+
+expected_calving_date date,
+
+purchase_date date,
+
+purchase_cost numeric,
+
+image_url text,
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.3 Milk Production (/production)
+
+Features:
+
+Record morning/evening milk sessions per cattle
+
+Bulk entry form for all lactating cattle
+
+Fat % and SNF % tracking
+
+Quality notes
+
+Stats cards: Today's Total, Morning, Evening
+
+Clickable stats to view history
+
+Per-cattle production history dialog
+
+Database Table:
+
+CREATE TABLE milk_production (
+
+id uuid PRIMARY KEY,
+
+cattle_id uuid REFERENCES cattle(id),
+
+production_date date NOT NULL,
+
+session text NOT NULL, -- 'morning' or 'evening'
+
+quantity_liters numeric NOT NULL,
+
+fat_percentage numeric,
+
+snf_percentage numeric,
+
+quality_notes text,
+
+recorded_by uuid,
+
+created_at timestamptz DEFAULT now(),
+
+UNIQUE(cattle_id, production_date, session)
+
+);
+
+4.4 Milk Procurement (/milk-procurement)
+
+Features:
+
+Track milk purchased from external vendors
+
+Vendor management (CRUD)
+
+Per-vendor balance tracking
+
+Payment recording
+
+FAT/SNF quality tracking
+
+Session-based (morning/evening)
+
+Analytics tab with charts
+
+Database Tables:
+
+CREATE TABLE milk_vendors (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+phone text,
+
+address text,
+
+area text,
+
+is_active boolean DEFAULT true,
+
+current_balance numeric DEFAULT 0,
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE milk_procurement (
+
+id uuid PRIMARY KEY,
+
+vendor_id uuid REFERENCES milk_vendors(id),
+
+vendor_name text,
+
+procurement_date date NOT NULL,
+
+session text NOT NULL,
+
+quantity_liters numeric NOT NULL,
+
+fat_percentage numeric,
+
+snf_percentage numeric,
+
+rate_per_liter numeric,
+
+total_amount numeric,
+
+payment_status text DEFAULT 'pending',
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.5 Products (/products)
+
+Features:
+
+Define dairy products (milk variants, paneer, ghee, etc.)
+
+Base price, tax percentage, unit configuration
+
+Active/inactive status
+
+Database Table:
+
+CREATE TABLE products (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+description text,
+
+base_price numeric NOT NULL,
+
+unit text DEFAULT 'liter',
+
+tax_percentage numeric DEFAULT 0,
+
+is_active boolean DEFAULT true,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.6 Customers (/customers)
+
+Features:
+
+Customer CRUD with subscription setup
+
+Subscription types: daily, alternate, weekly, custom
+
+Per-product delivery schedules (day selection)
+
+Custom pricing per customer per product
+
+Vacation management (pause deliveries)
+
+Customer ledger (transaction history)
+
+Customer detail dialog with full info
+
+Credit/Advance balance tracking
+
+Account approval management (for customer portal registrations)
+
+Database Tables:
+
+CREATE TABLE customers (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+phone text,
+
+email text,
+
+address text,
+
+area text,
+
+subscription_type text DEFAULT 'daily',
+
+billing_cycle text DEFAULT 'monthly',
+
+credit_balance numeric DEFAULT 0,
+
+advance_balance numeric DEFAULT 0,
+
+is_active boolean DEFAULT true,
+
+route_id uuid,
+
+notes text, -- contains JSON schedule metadata
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE customer_products (
+
+id uuid PRIMARY KEY,
+
+customer_id uuid REFERENCES customers(id),
+
+product_id uuid REFERENCES products(id),
+
+quantity numeric NOT NULL,
+
+custom_price numeric,
+
+is_active boolean DEFAULT true,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE customer_vacations (
+
+id uuid PRIMARY KEY,
+
+customer_id uuid REFERENCES customers(id),
+
+start_date date NOT NULL,
+
+end_date date NOT NULL,
+
+reason text,
+
+is_active boolean DEFAULT true,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE customer_ledger (
+
+id uuid PRIMARY KEY,
+
+customer_id uuid REFERENCES customers(id),
+
+transaction_date date DEFAULT CURRENT_DATE,
+
+transaction_type text NOT NULL, -- invoice, payment, adjustment
+
+description text NOT NULL,
+
+debit_amount numeric DEFAULT 0,
+
+credit_amount numeric DEFAULT 0,
+
+running_balance numeric DEFAULT 0,
+
+reference_id uuid,
+
+created_by uuid,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.7 Deliveries (/deliveries)
+
+Features:
+
+Daily delivery tracking per customer
+
+Status: pending, delivered, missed, partial
+
+Date picker to view different days
+
+Bulk update actions (mark all delivered)
+
+Vacation indicator badges
+
+Delivery items editor (products + quantities)
+
+One-click status updates
+
+Database Tables:
+
+CREATE TABLE deliveries (
+
+id uuid PRIMARY KEY,
+
+customer_id uuid REFERENCES customers(id),
+
+delivery_date date NOT NULL,
+
+status delivery_status DEFAULT 'pending', -- pending, delivered, missed, partial
+
+delivered_by uuid,
+
+delivery_time timestamptz,
+
+notes text,
+
+created_at timestamptz DEFAULT now(),
+
+UNIQUE(customer_id, delivery_date)
+
+);
+
+CREATE TABLE delivery_items (
+
+id uuid PRIMARY KEY,
+
+delivery_id uuid REFERENCES deliveries(id),
+
+product_id uuid REFERENCES products(id),
+
+quantity numeric NOT NULL,
+
+unit_price numeric NOT NULL,
+
+total_amount numeric NOT NULL,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.8 Billing & Invoices (/billing)
+
+Features:
+
+Smart invoice creator (auto-calculates from deliveries)
+
+Edit invoices
+
+Payment recording (partial payments supported)
+
+Status tracking: pending, partial, paid, overdue
+
+PDF invoice generation with UPI QR code
+
+Stats: Total Billed, Collected, Pending, Overdue
+
+Database Tables:
+
+CREATE TABLE invoices (
+
+id uuid PRIMARY KEY,
+
+invoice_number text UNIQUE NOT NULL,
+
+customer_id uuid REFERENCES customers(id),
+
+billing_period_start date NOT NULL,
+
+billing_period_end date NOT NULL,
+
+total_amount numeric NOT NULL,
+
+tax_amount numeric DEFAULT 0,
+
+discount_amount numeric DEFAULT 0,
+
+final_amount numeric NOT NULL,
+
+paid_amount numeric DEFAULT 0,
+
+payment_status payment_status DEFAULT 'pending',
+
+due_date date,
+
+payment_date date,
+
+upi_handle text,
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE payments (
+
+id uuid PRIMARY KEY,
+
+invoice_id uuid REFERENCES invoices(id),
+
+customer_id uuid REFERENCES customers(id),
+
+amount numeric NOT NULL,
+
+payment_mode text,
+
+payment_date date NOT NULL,
+
+reference_number text,
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.9 Bottles Management (/bottles)
+
+Features:
+
+Track reusable bottle inventory
+
+Issue bottles to customers
+
+Record returns
+
+Track pending bottles per customer
+
+Bottle types: glass, plastic; sizes: 500ml, 1L, etc.
+
+Deposit amounts
+
+Database Tables:
+
+CREATE TABLE bottles (
+
+id uuid PRIMARY KEY,
+
+bottle_type bottle_type NOT NULL, -- glass, plastic
+
+size bottle_size NOT NULL, -- 500ml, 1l, 2l
+
+total_quantity int DEFAULT 0,
+
+available_quantity int DEFAULT 0,
+
+deposit_amount numeric DEFAULT 0,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE bottle_transactions (
+
+id uuid PRIMARY KEY,
+
+bottle_id uuid REFERENCES bottles(id),
+
+customer_id uuid,
+
+transaction_type text NOT NULL, -- issued, returned, lost, damaged
+
+quantity int NOT NULL,
+
+transaction_date date NOT NULL,
+
+staff_id uuid,
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE customer_bottles (
+
+id uuid PRIMARY KEY,
+
+customer_id uuid REFERENCES customers(id),
+
+bottle_id uuid REFERENCES bottles(id),
+
+quantity_pending int DEFAULT 0,
+
+last_issued_date date,
+
+last_returned_date date,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.10 Health Records (/health)
+
+Features:
+
+Record vaccinations, treatments, checkups, diseases
+
+Vet name and cost tracking
+
+Next due date reminders
+
+Auto-expense creation for health costs
+
+Upcoming reminders panel
+
+Database Table:
+
+CREATE TABLE cattle_health (
+
+id uuid PRIMARY KEY,
+
+cattle_id uuid REFERENCES cattle(id),
+
+record_date date NOT NULL,
+
+record_type text NOT NULL, -- vaccination, treatment, checkup, disease
+
+title text NOT NULL,
+
+description text,
+
+vet_name text,
+
+cost numeric,
+
+next_due_date date,
+
+recorded_by uuid,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.11 Breeding Management (/breeding)
+
+Features:
+
+Heat detection records
+
+Artificial insemination tracking (bull/semen ID, technician)
+
+Pregnancy confirmation checks
+
+Expected calving date calculation (283 days from AI)
+
+Actual calving records with calf details
+
+Calendar view + List view toggle
+
+Upcoming calvings panel
+
+Stats: Heat detections, AI records, Pregnant count, Monthly calvings
+
+Database Table:
+
+CREATE TABLE breeding_records (
+
+id uuid PRIMARY KEY,
+
+cattle_id uuid REFERENCES cattle(id),
+
+record_type text NOT NULL, -- heat_detection, artificial_insemination, pregnancy_check, calving
+
+record_date date NOT NULL,
+
+heat_cycle_day int,
+
+insemination_bull text,
+
+insemination_technician text,
+
+pregnancy_confirmed boolean,
+
+expected_calving_date date,
+
+actual_calving_date date,
+
+calf_details jsonb, -- {gender, weight, tag_number}
+
+notes text,
+
+recorded_by uuid,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.12 Feed & Inventory (/inventory)
+
+Features:
+
+Track feed/fodder stock levels
+
+Categories: green fodder, dry fodder, concentrate, supplement, medicine
+
+Min stock level alerts
+
+Add stock / Record consumption
+
+Stock value calculation
+
+Low stock alerts
+
+Database Tables:
+
+CREATE TABLE feed_inventory (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+category text NOT NULL,
+
+unit text DEFAULT 'kg',
+
+current_stock numeric DEFAULT 0,
+
+min_stock_level numeric DEFAULT 0,
+
+cost_per_unit numeric,
+
+supplier text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE feed_consumption (
+
+id uuid PRIMARY KEY,
+
+feed_id uuid REFERENCES feed_inventory(id),
+
+cattle_id uuid,
+
+consumption_date date NOT NULL,
+
+quantity numeric NOT NULL,
+
+recorded_by uuid,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.13 Equipment (/equipment)
+
+Features:
+
+Track dairy equipment (milking machines, coolers, etc.)
+
+Maintenance records
+
+Warranty tracking
+
+Purchase cost tracking
+
+Auto-expense for purchases and maintenance
+
+Database Tables:
+
+CREATE TABLE equipment (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+category text NOT NULL,
+
+model text,
+
+serial_number text,
+
+purchase_date date,
+
+purchase_cost numeric,
+
+warranty_expiry date,
+
+status text DEFAULT 'active',
+
+location text,
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE maintenance_records (
+
+id uuid PRIMARY KEY,
+
+equipment_id uuid REFERENCES equipment(id),
+
+maintenance_date date NOT NULL,
+
+maintenance_type text NOT NULL,
+
+description text,
+
+cost numeric DEFAULT 0,
+
+performed_by text,
+
+next_maintenance_date date,
+
+notes text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.14 Expenses (/expenses)
+
+Features:
+
+Manual expense entry
+
+Categories: feed, medicine, salary, transport, electricity, maintenance, misc
+
+Auto-generated expenses (from payroll, health, maintenance)
+
+Category breakdown visualization
+
+Monthly totals
+
+Database Table:
+
+CREATE TABLE expenses (
+
+id uuid PRIMARY KEY,
+
+category text NOT NULL,
+
+title text NOT NULL,
+
+amount numeric NOT NULL,
+
+expense_date date NOT NULL,
+
+notes text, -- contains [AUTO] prefix for automated entries
+
+receipt_url text,
+
+cattle_id uuid,
+
+recorded_by uuid,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.15 Employees (/employees)
+
+Features:
+
+Employee records with roles and salary
+
+Attendance tracking (auto-creates daily records as "present")
+
+Payroll management
+
+Shift management
+
+Auto-expense when salary marked as paid
+
+Employee detail dialog
+
+Database Tables:
+
+CREATE TABLE employees (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+phone text,
+
+role user_role NOT NULL,
+
+salary numeric,
+
+joining_date date,
+
+is_active boolean DEFAULT true,
+
+address text,
+
+user_id uuid,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE attendance (
+
+id uuid PRIMARY KEY,
+
+employee_id uuid REFERENCES employees(id),
+
+attendance_date date NOT NULL,
+
+check_in time,
+
+check_out time,
+
+status text DEFAULT 'present',
+
+notes text,
+
+created_at timestamptz DEFAULT now(),
+
+UNIQUE(employee_id, attendance_date)
+
+);
+
+CREATE TABLE payroll_records (
+
+id uuid PRIMARY KEY,
+
+employee_id uuid REFERENCES employees(id),
+
+pay_period_start date NOT NULL,
+
+pay_period_end date NOT NULL,
+
+base_salary numeric NOT NULL,
+
+overtime_hours numeric DEFAULT 0,
+
+bonus numeric DEFAULT 0,
+
+deductions numeric DEFAULT 0,
+
+net_salary numeric NOT NULL,
+
+payment_status text DEFAULT 'pending',
+
+payment_date date,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+CREATE TABLE shifts (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+start_time time NOT NULL,
+
+end_time time NOT NULL,
+
+is_active boolean DEFAULT true,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.16 Routes (/routes)
+
+Features:
+
+Define delivery routes
+
+Assign customers to routes
+
+Route optimization
+
+Database Table:
+
+CREATE TABLE delivery_routes (
+
+id uuid PRIMARY KEY,
+
+name text NOT NULL,
+
+description text,
+
+assigned_staff uuid,
+
+is_active boolean DEFAULT true,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.17 Price Rules (/price-rules)
+
+Features:
+
+Custom pricing rules per customer or area
+
+Discount configurations
+
+4.18 Reports (/reports)
+
+Features:
+
+Tabs: Daily Data, Production, Financial, Cattle, Customers, Backup
+
+30-day production trend
+
+Monthly revenue overview
+
+Expense breakdown pie chart
+
+Cattle composition stats
+
+Customer analytics
+
+Data backup/export (Excel/CSV)
+
+4.19 User Management (/users)
+
+Features:
+
+Create/delete staff users (super_admin only)
+
+Assign roles
+
+Reset user PINs
+
+View active users
+
+4.20 Audit Logs (/audit-logs)
+
+Features:
+
+Track all system activities
+
+Filter by user, action type, date range
+
+Entity type tracking
+
+Database Table:
+
+CREATE TABLE activity_logs (
+
+id uuid PRIMARY KEY,
+
+user_id uuid,
+
+action text NOT NULL,
+
+entity_type text NOT NULL,
+
+entity_id uuid,
+
+details jsonb,
+
+ip_address text,
+
+created_at timestamptz DEFAULT now()
+
+);
+
+4.21 Settings (/settings)
+
+Features:
+
+Dairy information (name, address, phone, email)
+
+Invoice prefix configuration
+
+UPI handle for payments
+
+User profile editing
+
+PIN change functionality
+
+Database Table:
+
+CREATE TABLE dairy_settings (
+
+id uuid PRIMARY KEY,
+
+dairy_name text DEFAULT 'My Dairy',
+
+address text,
+
+phone text,
+
+email text,
+
+logo_url text,
+
+invoice_prefix text DEFAULT 'INV',
+
+currency text DEFAULT 'INR',
+
+financial_year_start int DEFAULT 4,
+
+upi_handle text,
+
+settings jsonb DEFAULT '{}',
+
+created_at timestamptz DEFAULT now()
+
+);
+
+5. Notifications (/notifications)
+
+Features:
+
+System notifications
+
+Alert management
+
+Notification preferences integrate telegram
+
+
+
+ 
+
+6. AUTOMATIONS
+
+6.1 Auto-Delivery Scheduler
+
+Hook: useAutoDeliveryScheduler
+
+Creates daily deliveries based on customer subscriptions
+
+Respects subscription frequency (daily, alternate, weekly, custom)
+
+Checks vacation status
+
+Skips if delivery already exists
+
+Creates delivery items from subscriptions
+
+Optional auto-mark as delivered
+
+Database Function:
+
+CREATE FUNCTION run_auto_delivery() RETURNS void;
+
+-- Scheduled via pg_cron at 4:30 AM UTC (10:00 AM IST)
+
+SELECT cron.schedule('run-auto-delivery', '30 4 * * *', 'SELECT run_auto_delivery()');6.2 Auto-Expense Creation
+
+Hook: useExpenseAutomation Automatically creates expense entries for:
+
+Salary payments (when payroll marked paid)
+
+Equipment purchases
+
+Maintenance costs
+
+Health record costs (vaccinations, treatments)
+
+Feed/inventory purchases
+
+Vendor payments
+
+Bottle losses
+
+Uses [AUTO] prefix in notes to prevent duplicates.
+
+6.3 Auto-Attendance
+
+Hook: useAutoAttendance
+
+Creates attendance records daily for all active employees
+
+Default status: "present"
+
+Can be manually changed to absent/half_day
+
+Database Function:
+
+CREATE FUNCTION auto_create_daily_attendance() RETURNS void;
+
+6.4 Cattle Status Automation
+
+Hook: useCattleStatusAutomation
+
+Auto-updates lactation status based on breeding records
+
+Sets to "pregnant" when pregnancy confirmed
+
+Sets to "calving" near expected calving date
+
+Sets to "lactating" after calving recorded
+
+6.5 Ledger Automation
+
+Hook: useLedgerAutomation
+
+Auto-creates ledger entries when invoices generated
+
+Updates running balance
+
+Tracks payments
+
+6.6 Invoice Auto-Generation
+
+Hook: useAutoInvoiceGenerator
+
+Bulk invoice generation for selected customers
+
+Based on delivery items in billing period
+
+7. UI COMPONENTS
+
+7.1 Layout Components
+
+DashboardLayout: Staff sidebar + header + mobile nav
+
+AppSidebar: Collapsible sidebar with role-based menu
+
+MobileNavbar: Bottom navigation for mobile
+
+ThemeToggle: Dark/light mode
+
+7.2 Common Components
+
+PageHeader: Consistent page headers with actions
+
+DataTable: Searchable, sortable tables
+
+StatusBadge: Color-coded status indicators
+
+ConfirmDialog: Confirmation modals
+
+ExportButton: Excel/CSV/pdf export
+
+LoadingSkeleton: Page loading states
+
+ErrorBoundary: Error handling
+
+NetworkErrorCard: Connection error display
+
+AnimatedContainer: Framer Motion wrapper
+
+7.3 Responsive Dialogs
+
+ResponsiveDialog: Drawer on mobile, Dialog on desktop
+
+All forms use responsive dialogs
+
+7.4 Charts (Recharts)
+
+Area charts for production trends
+
+Bar charts for comparisons
+
+Pie/Donut charts for breakdowns
+
+Line charts for growth
+
+8. MOBILE CONSIDERATIONS
+
+8.1 Mobile-First Design
+
+All layouts responsive
+
+Touch-friendly buttons (min 44px)
+
+Swipeable cards
+
+Bottom navigation on mobile
+
+Collapsible sidebar
+
+8.2 Mobile Components
+
+MobileCattleCard: Card view for cattle
+
+MobileDeliveryCard: Card view for deliveries
+
+QuickActionFab: Floating action button
+
+8.3 Capacitor Integration
+
+Native app wrapper for iOS/Android
+
+Haptic feedback
+
+Status bar integration
+
+Splash screen
+
+9. ROW-LEVEL SECURITY (RLS)
+
+Every table has RLS policies based on:
+
+is_manager_or_admin() - Full access helper
+
+has_role(user_id, role) - Role check helper
+
+is_authenticated() - Auth check
+
+Key Policy Patterns:
+
+-- Managers and admins have full access
+
+CREATE POLICY "full_access" ON table_name
+
+FOR ALL USING (is_manager_or_admin(auth.uid()));
+
+-- Role-specific access
+
+CREATE POLICY "farm_workers_access" ON cattle
+
+FOR ALL USING (has_role(auth.uid(), 'farm_worker'));
+
+-- Customers see own data
+
+CREATE POLICY "customer_own_data" ON deliveries
+
+FOR SELECT USING (
+
+EXISTS (SELECT 1 FROM customer_accounts ca
+
+WHERE ca.customer_id = deliveries.customer_id 
+
+      AND ca.user_id = auth.uid())
+
+);
+
+-- Auditors can read everything
+
+CREATE POLICY "auditor_read" ON table_name
+
+FOR SELECT USING (has_role(auth.uid(), 'auditor'));
+
+10. DATABASE FUNCTIONS
+
+Required RPC Functions Summary:
+
+staff_login - Staff authentication
+
+validate_session - Session validation
+
+bootstrap_super_admin - Initial admin setup
+
+admin_create_staff - Create staff users
+
+admin_delete_staff_v2 - Delete staff users
+
+admin_reset_user_pin - Reset user PIN
+
+customer_login - Customer authentication
+
+customer_register - Customer registration
+
+customer_change_pin - Customer PIN change
+
+validate_customer_session - Customer session validation
+
+staff_change_own_pin - Staff PIN change
+
+change_own_pin - Legacy PIN change
+
+run_auto_delivery - Automated delivery creation
+
+auto_create_daily_attendance - Daily attendance records
+
+cleanup_expired_sessions - Session cleanup
+
+11. VERCEL DEPLOYMENT
+
+11.1 Build Configuration
+
+{
+
+"framework": "vite",
+
+"buildCommand": "npm run build",
+
+"outputDirectory": "dist",
+
+"installCommand": "npm install"
+
+}
+
+11.2 Environment Variables
+
+VITE_SUPABASE_URL=https://hupqefsgksjdzjfpzjav.supabase.co
+
+VITE_SUPABASE_PUBLISHABLE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1cHFlZnNna3NqZHpqZnB6amF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3ODI0MDUsImV4cCI6MjA4NTM1ODQwNX0.-wWQw9c7PO-0i4yc3DzvptEU7P3I0SFF1Fwq1GjX7Oc
+
+VITE_SUPABASE_PROJECT_ID=hupqefsgksjdzjfpzjav
+
+11.3 vercel.json
+
+{
+
+"rewrites": [{ "source": "/(.*)", "destination": "/index.html" }]
+
+}
+
+12. SUPABASE CONFIGURATION
+
+12.1 Extensions Required
+
+pgcrypto - For PIN hashing
+
+pg_cron - For scheduled jobs
+
+12.2 Scheduled Jobs
+
+-- Daily delivery automation at 4:30 AM UTC
+
+SELECT cron.schedule('run-auto-delivery', '30 4 * * *', 'SELECT run_auto_delivery()');
+
+-- Session cleanup (daily at midnight)
+
+SELECT cron.schedule('cleanup-sessions', '0 0 * * *', 'SELECT cleanup_expired_sessions()');
+
+12.3 Storage Buckets
+
+avatars - User profile images
+
+receipts - Expense receipts
+
+logos - Dairy logos
+
+13. IMPLEMENTATION NOTES
+
+13.1 Key Patterns
+
+TanStack Query for all data fetching with 5-minute stale time
+
+Optimistic updates for better UX
+
+Toast notifications for all actions
+
+Form validation using Zod schemas
+
+Date formatting with date-fns (dd MMM yyyy format)
+
+Currency formatting with toLocaleString("en-IN")
+
+Loading skeletons for all pages
+
+13.2 Color Scheme
+
+
+
+--info: blue
+
+--success: green
+
+--warning: amber
+
+--destructive: red
+
+--breeding-heat: red
+
+--breeding-insemination: blue
+
+--breeding-pregnancy: purple
+
+--breeding-calving: green
+
+13.3 Font
+
+Outfit font family (via @fontsource/outfit)    [if any doubt , ask me, don't be in hurry, implement each and every function properly and in staged manner, comprehensively check and implement very INTELLIGENTLY & LOGICALLY] (if you want to add something , some feature which is complementary/ necessary/essential for daily working of single handedly management of complete dairy system., you can add that too, but above provided features are must)
