@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Plus, Edit, Trash2, DollarSign, Download, Receipt, Stethoscope, Users, Package, Wrench, ChevronDown, ChevronUp, Zap } from "lucide-react";
+import { Plus, Edit, Trash2, DollarSign, Download, Receipt, Stethoscope, Users, Package, Wrench, ChevronDown, ChevronUp, Zap, Banknote } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -31,14 +31,14 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column, Action } from "@/components/DataTable";
 import { useToast } from "@/hooks/use-toast";
-import { useExpenses, useHealthRecords, useEmployees, useInventory, useEquipment, useCattle, useAddExpense } from "@/hooks/useData";
+import { useExpenses, useHealthRecords, useEmployees, useInventory, useEquipment, useCattle, useAddExpense, useVendorPayments } from "@/hooks/useData";
 import { PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend } from "recharts";
-import type { Expense, ExpenseCategory, HealthRecord, Employee, InventoryItem, Equipment, Cattle } from "@shared/types";
+import type { Expense, ExpenseCategory, HealthRecord, Employee, InventoryItem, Equipment, Cattle, VendorPayment } from "@shared/types";
 import { Skeleton } from "@/components/ui/skeleton";
 
 interface AutoExpense {
   id: string;
-  source: 'health_record' | 'employee_salary' | 'inventory' | 'equipment';
+  source: 'health_record' | 'employee_salary' | 'inventory' | 'equipment' | 'vendor_payment';
   sourceId: string;
   title: string;
   amount: number;
@@ -72,6 +72,7 @@ const sourceLabels = {
   employee_salary: "Employee Salaries",
   inventory: "Inventory Purchases",
   equipment: "Equipment Maintenance",
+  vendor_payment: "Vendor Payments",
 };
 
 const sourceIcons = {
@@ -79,6 +80,7 @@ const sourceIcons = {
   employee_salary: Users,
   inventory: Package,
   equipment: Wrench,
+  vendor_payment: Banknote,
 };
 
 const sourceColors = {
@@ -86,6 +88,7 @@ const sourceColors = {
   employee_salary: "text-purple-600 bg-purple-100 dark:bg-purple-900/30",
   inventory: "text-green-600 bg-green-100 dark:bg-green-900/30",
   equipment: "text-orange-600 bg-orange-100 dark:bg-orange-900/30",
+  vendor_payment: "text-emerald-600 bg-emerald-100 dark:bg-emerald-900/30",
 };
 
 export default function ExpensesPage() {
@@ -98,6 +101,7 @@ export default function ExpensesPage() {
   const { data: inventory, isLoading: inventoryLoading } = useInventory();
   const { data: equipment, isLoading: equipmentLoading } = useEquipment();
   const { data: cattle } = useCattle();
+  const { data: vendorPayments, isLoading: paymentsLoading } = useVendorPayments();
   const addExpenseMutation = useAddExpense();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
@@ -197,8 +201,32 @@ export default function ExpensesPage() {
       });
     }
     
+    // Vendor Payments -> Milk Procurement Expenses
+    if (vendorPayments) {
+      vendorPayments.forEach((payment: VendorPayment) => {
+        if (payment.amount && payment.amount > 0) {
+          const paymentModeLabels: Record<string, string> = {
+            'cash': 'Cash',
+            'bank_transfer': 'Bank Transfer',
+            'upi': 'UPI',
+            'cheque': 'Cheque',
+          };
+          expenses.push({
+            id: `vendor-payment-${payment.id}`,
+            source: 'vendor_payment',
+            sourceId: payment.id,
+            title: `Payment to ${payment.vendor_name || 'Vendor'}`,
+            amount: payment.amount,
+            date: payment.payment_date,
+            category: 'misc',
+            details: `${paymentModeLabels[payment.payment_mode] || payment.payment_mode}${payment.reference_number ? ` - Ref: ${payment.reference_number}` : ''}`,
+          });
+        }
+      });
+    }
+    
     return expenses.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
-  }, [healthRecords, employees, inventory, equipment, cattle]);
+  }, [healthRecords, employees, inventory, equipment, cattle, vendorPayments]);
 
   // Group auto expenses by source
   const autoExpensesBySource = useMemo(() => {
@@ -207,6 +235,7 @@ export default function ExpensesPage() {
       employee_salary: [],
       inventory: [],
       equipment: [],
+      vendor_payment: [],
     };
     autoExpenses.forEach(exp => {
       grouped[exp.source].push(exp);
