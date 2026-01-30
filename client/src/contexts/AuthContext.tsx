@@ -3,6 +3,18 @@ import { supabase, getStoredSession, storeSession, clearSession, getStoredUser }
 import type { Profile, LoginResponse } from '@shared/types';
 
 const DEMO_USERS: Record<string, { pin: string; user: Profile }> = {
+  "7897716792": {
+    pin: "101101",
+    user: {
+      id: "admin-awadh-dairy",
+      full_name: "Awadh Dairy Admin",
+      phone: "7897716792",
+      role: "super_admin",
+      is_active: true,
+      created_at: new Date().toISOString(),
+      updated_at: new Date().toISOString()
+    }
+  },
   "9876543210": {
     pin: "123456",
     user: {
