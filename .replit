@@ -37,3 +37,10 @@ author = "agent"
 task = "shell.exec"
 args = "npm run dev"
 waitForPort = 5000
+
+[userenv]
+
+[userenv.shared]
+VITE_SUPABASE_URL = "https://hupqefsgksjdzjfpzjav.supabase.co"
+VITE_SUPABASE_PUBLISHABLE_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Imh1cHFlZnNna3NqZHpqZnB6amF2Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Njk3ODI0MDUsImV4cCI6MjA4NTM1ODQwNX0.-wWQw9c7PO-0i4yc3DzvptEU7P3I0SFF1Fwq1GjX7Oc"
+VITE_SUPABASE_PROJECT_ID = "hupqefsgksjdzjfpzjav"
