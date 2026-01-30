@@ -1,5 +1,6 @@
+import { useMemo } from "react";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
+import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import {
   Milk,
   Users,
@@ -21,7 +22,11 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
-import { useDashboardStats } from "@/hooks/useData";
+import { 
+  useDashboardStats, useCattle, useProduction, useDeliveries, 
+  useExpenses, useInventory, useEquipment, useHealthRecords, 
+  useEmployees, useInvoices, useVendorPayments, useCustomers 
+} from "@/hooks/useData";
 import {
   AreaChart,
   Area,
@@ -38,38 +43,7 @@ import {
   Legend,
 } from "recharts";
 import { Link } from "wouter";
-
-// Sample data for charts
-const productionData = [
-  { day: "Mon", morning: 120, evening: 95 },
-  { day: "Tue", morning: 135, evening: 102 },
-  { day: "Wed", morning: 128, evening: 98 },
-  { day: "Thu", morning: 142, evening: 110 },
-  { day: "Fri", morning: 138, evening: 105 },
-  { day: "Sat", morning: 145, evening: 112 },
-  { day: "Sun", morning: 140, evening: 108 },
-];
-
-const cattleComposition = [
-  { name: "Lactating", value: 45, color: "hsl(142, 55%, 38%)" },
-  { name: "Pregnant", value: 20, color: "hsl(280, 65%, 60%)" },
-  { name: "Dry", value: 15, color: "hsl(48, 96%, 53%)" },
-  { name: "Calving", value: 5, color: "hsl(340, 65%, 55%)" },
-];
-
-const expenseBreakdown = [
-  { name: "Feed", value: 45000, color: "hsl(142, 55%, 38%)" },
-  { name: "Medicine", value: 12000, color: "hsl(199, 89%, 48%)" },
-  { name: "Salary", value: 35000, color: "hsl(280, 65%, 60%)" },
-  { name: "Maintenance", value: 8000, color: "hsl(48, 96%, 53%)" },
-  { name: "Other", value: 5000, color: "hsl(160, 15%, 50%)" },
-];
-
-const deliveryStats = [
-  { status: "Delivered", count: 45, color: "hsl(142, 76%, 36%)" },
-  { status: "Pending", count: 12, color: "hsl(38, 92%, 50%)" },
-  { status: "Missed", count: 3, color: "hsl(0, 72%, 51%)" },
-];
+import type { ExpenseCategory } from "@shared/types";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -88,6 +62,26 @@ const itemVariants = {
     y: 0,
     transition: { duration: 0.4 },
   },
+};
+
+const categoryColors: Record<ExpenseCategory, string> = {
+  feed: "hsl(142, 55%, 38%)",
+  medicine: "hsl(199, 89%, 48%)",
+  salary: "hsl(280, 65%, 60%)",
+  transport: "hsl(48, 96%, 53%)",
+  electricity: "hsl(25, 95%, 53%)",
+  maintenance: "hsl(340, 65%, 55%)",
+  misc: "hsl(160, 15%, 50%)",
+};
+
+const categoryLabels: Record<ExpenseCategory, string> = {
+  feed: "Feed",
+  medicine: "Medicine",
+  salary: "Salary",
+  transport: "Transport",
+  electricity: "Electricity",
+  maintenance: "Maintenance",
+  misc: "Other",
 };
 
 interface StatCardProps {
@@ -140,6 +134,138 @@ function StatCard({ title, value, change, icon: Icon, color, link }: StatCardPro
 export default function DashboardPage() {
   const { user } = useAuth();
   const { data: stats, isLoading } = useDashboardStats();
+  
+  // Fetch real data for charts
+  const { data: cattle = [] } = useCattle();
+  const { data: production = [] } = useProduction();
+  const { data: deliveries = [] } = useDeliveries();
+  const { data: expenses = [] } = useExpenses();
+  const { data: inventory = [] } = useInventory();
+  const { data: equipment = [] } = useEquipment();
+  const { data: healthRecords = [] } = useHealthRecords();
+  const { data: employees = [] } = useEmployees();
+  const { data: invoices = [] } = useInvoices();
+  const { data: vendorPayments = [] } = useVendorPayments();
+  const { data: customers = [] } = useCustomers();
+
+  // Calculate real 7-day production data
+  const productionData = useMemo(() => {
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const date = subDays(new Date(), 6 - i);
+      return {
+        date: format(date, 'yyyy-MM-dd'),
+        day: days[date.getDay()],
+      };
+    });
+
+    return last7Days.map(({ date, day }) => {
+      const dayProduction = production.filter(p => p.production_date === date);
+      const morning = dayProduction.filter(p => p.session === 'morning').reduce((sum, p) => sum + (p.quantity_liters || 0), 0);
+      const evening = dayProduction.filter(p => p.session === 'evening').reduce((sum, p) => sum + (p.quantity_liters || 0), 0);
+      return { day, morning: Math.round(morning), evening: Math.round(evening) };
+    });
+  }, [production]);
+
+  // Calculate real cattle composition
+  const cattleComposition = useMemo(() => {
+    const activeCattle = cattle.filter(c => c.status === 'active');
+    const lactating = activeCattle.filter(c => c.lactation_status === 'lactating').length;
+    const pregnant = activeCattle.filter(c => c.lactation_status === 'pregnant').length;
+    const dry = activeCattle.filter(c => c.lactation_status === 'dry').length;
+    const calving = activeCattle.filter(c => c.lactation_status === 'calving').length;
+    
+    return [
+      { name: "Lactating", value: lactating, color: "hsl(142, 55%, 38%)" },
+      { name: "Pregnant", value: pregnant, color: "hsl(280, 65%, 60%)" },
+      { name: "Dry", value: dry, color: "hsl(48, 96%, 53%)" },
+      { name: "Calving", value: calving, color: "hsl(340, 65%, 55%)" },
+    ].filter(c => c.value > 0);
+  }, [cattle]);
+
+  // Calculate real expense breakdown from ALL paid sources
+  const expenseBreakdown = useMemo(() => {
+    const categoryTotals: Record<ExpenseCategory, number> = {
+      feed: 0, medicine: 0, salary: 0, transport: 0, electricity: 0, maintenance: 0, misc: 0
+    };
+
+    // Manual expenses (already paid)
+    expenses.forEach(e => {
+      categoryTotals[e.category] += e.amount;
+    });
+
+    // Health records (veterinary costs - paid)
+    healthRecords.forEach(record => {
+      if (record.cost && record.cost > 0) {
+        categoryTotals.medicine += record.cost;
+      }
+    });
+
+    // Inventory purchases (paid)
+    inventory.forEach(item => {
+      if (item.unit_price && item.quantity && item.unit_price > 0) {
+        const total = item.unit_price * item.quantity;
+        if (item.category === 'feed') categoryTotals.feed += total;
+        else if (item.category === 'medicine') categoryTotals.medicine += total;
+        else if (item.category === 'equipment') categoryTotals.maintenance += total;
+        else categoryTotals.misc += total;
+      }
+    });
+
+    // Equipment purchases (paid)
+    equipment.forEach(eq => {
+      if (eq.purchase_cost && eq.purchase_cost > 0) {
+        categoryTotals.maintenance += eq.purchase_cost;
+      }
+    });
+
+    // Vendor payments (actually paid to vendors)
+    vendorPayments.forEach(payment => {
+      if (payment.amount && payment.amount > 0) {
+        categoryTotals.misc += payment.amount;
+      }
+    });
+
+    // Employee salaries (paid monthly)
+    employees.filter(e => e.is_active && e.salary && e.salary > 0).forEach(emp => {
+      categoryTotals.salary += emp.salary!;
+    });
+
+    return Object.entries(categoryTotals)
+      .filter(([_, value]) => value > 0)
+      .map(([key, value]) => ({
+        name: categoryLabels[key as ExpenseCategory],
+        value: Math.round(value),
+        color: categoryColors[key as ExpenseCategory],
+      }));
+  }, [expenses, healthRecords, inventory, equipment, vendorPayments, employees]);
+
+  // Calculate real delivery stats
+  const deliveryStats = useMemo(() => {
+    const today = format(new Date(), 'yyyy-MM-dd');
+    const todayDeliveries = deliveries.filter(d => d.delivery_date === today);
+    
+    return [
+      { status: "Delivered", count: todayDeliveries.filter(d => d.status === 'delivered').length, color: "hsl(142, 76%, 36%)" },
+      { status: "Pending", count: todayDeliveries.filter(d => d.status === 'pending').length, color: "hsl(38, 92%, 50%)" },
+      { status: "Missed", count: todayDeliveries.filter(d => d.status === 'missed').length, color: "hsl(0, 72%, 51%)" },
+    ];
+  }, [deliveries]);
+
+  // Calculate total expenses for display
+  const totalExpenses = useMemo(() => {
+    return expenseBreakdown.reduce((sum, e) => sum + e.value, 0);
+  }, [expenseBreakdown]);
+
+  // Calculate total revenue from paid invoices
+  const totalRevenue = useMemo(() => {
+    return invoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0);
+  }, [invoices]);
+
+  // Calculate outstanding amount from customers
+  const outstandingAmount = useMemo(() => {
+    return customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0);
+  }, [customers]);
 
   const roleLabels: Record<string, string> = {
     super_admin: "Super Admin",
