@@ -14,12 +14,14 @@ import {
   Package,
   ArrowRight,
   CircleDot,
+  Loader2,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { useAuth } from "@/contexts/AuthContext";
+import { useDashboardStats } from "@/hooks/useData";
 import {
   AreaChart,
   Area,
@@ -137,6 +139,7 @@ function StatCard({ title, value, change, icon: Icon, color, link }: StatCardPro
 
 export default function DashboardPage() {
   const { user } = useAuth();
+  const { data: stats, isLoading } = useDashboardStats();
 
   const roleLabels: Record<string, string> = {
     super_admin: "Super Admin",
@@ -219,7 +222,7 @@ export default function DashboardPage() {
         <motion.div variants={itemVariants}>
           <StatCard
             title="Today's Production"
-            value="485 L"
+            value={isLoading ? "..." : `${stats?.todayProduction?.toFixed(1) || 0} L`}
             change={8.2}
             icon={Milk}
             color="bg-green-500/10 text-green-600 dark:text-green-400"
@@ -229,7 +232,7 @@ export default function DashboardPage() {
         <motion.div variants={itemVariants}>
           <StatCard
             title="Active Cattle"
-            value="85"
+            value={isLoading ? "..." : (stats?.totalCattle || 0)}
             change={2.5}
             icon={Package}
             color="bg-blue-500/10 text-blue-600 dark:text-blue-400"
@@ -239,7 +242,7 @@ export default function DashboardPage() {
         <motion.div variants={itemVariants}>
           <StatCard
             title="Total Customers"
-            value="124"
+            value={isLoading ? "..." : (stats?.activeCustomers || 0)}
             change={12.3}
             icon={Users}
             color="bg-purple-500/10 text-purple-600 dark:text-purple-400"
@@ -249,7 +252,7 @@ export default function DashboardPage() {
         <motion.div variants={itemVariants}>
           <StatCard
             title="Monthly Revenue"
-            value="₹2,45,000"
+            value={isLoading ? "..." : `₹${((stats?.monthlyRevenue || 0) / 1000).toFixed(0)}K`}
             change={15.8}
             icon={IndianRupee}
             color="bg-amber-500/10 text-amber-600 dark:text-amber-400"

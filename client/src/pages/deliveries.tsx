@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
 import { 
@@ -27,7 +27,9 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
+import { useDeliveries, useCustomers, useRoutes } from "@/hooks/useData";
 import type { Delivery, DeliveryStatus } from "@shared/types";
 
 interface DeliveryWithCustomer extends Delivery {

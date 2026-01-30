@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { Plus, Eye, Edit, Trash2, Phone, MapPin, Calendar, IndianRupee, Download } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
@@ -26,7 +26,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column, Action } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
+import { useCustomers, useAddCustomer, useUpdateCustomer } from "@/hooks/useData";
 import type { Customer, SubscriptionType } from "@shared/types";
 
 // Sample data
@@ -102,7 +104,10 @@ const sampleCustomers: Customer[] = [
 const areas = ["Sector 12", "Model Town", "Civil Lines", "Main Market", "Garden Colony", "Industrial Area"];
 
 export default function CustomersPage() {
-  const [customers, setCustomers] = useState<Customer[]>(sampleCustomers);
+  const { data: customersData, isLoading } = useCustomers();
+  const addCustomerMutation = useAddCustomer();
+  const updateCustomerMutation = useUpdateCustomer();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
@@ -119,12 +124,14 @@ export default function CustomersPage() {
     notes: "",
   });
 
-  const stats = {
+  const customers = customersData || [];
+
+  const stats = useMemo(() => ({
     total: customers.length,
     active: customers.filter((c) => c.is_active).length,
-    credit: customers.reduce((sum, c) => sum + c.credit_balance, 0),
-    advance: customers.reduce((sum, c) => sum + c.advance_balance, 0),
-  };
+    credit: customers.reduce((sum, c) => sum + (c.credit_balance || c.outstanding_balance || 0), 0),
+    advance: customers.reduce((sum, c) => sum + (c.advance_balance || c.credit_limit || 0), 0),
+  }), [customers]);
 
   const columns: Column<Customer>[] = [
     {
@@ -155,33 +162,39 @@ export default function CustomersPage() {
       ),
     },
     {
-      key: "subscription_type",
-      header: "Subscription",
+      key: "customer_type",
+      header: "Type",
       render: (item) => (
         <Badge variant="secondary" className="capitalize">
-          {item.subscription_type}
+          {item.customer_type || item.subscription_type || "individual"}
         </Badge>
       ),
     },
     {
-      key: "credit_balance",
-      header: "Credit",
+      key: "outstanding_balance",
+      header: "Outstanding",
       sortable: true,
-      render: (item) => (
-        <span className={item.credit_balance > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
-          ₹{item.credit_balance.toLocaleString("en-IN")}
-        </span>
-      ),
+      render: (item) => {
+        const balance = item.outstanding_balance || item.credit_balance || 0;
+        return (
+          <span className={balance > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
+            ₹{balance.toLocaleString("en-IN")}
+          </span>
+        );
+      },
     },
     {
-      key: "advance_balance",
-      header: "Advance",
+      key: "credit_limit",
+      header: "Credit Limit",
       sortable: true,
-      render: (item) => (
-        <span className={item.advance_balance > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
-          ₹{item.advance_balance.toLocaleString("en-IN")}
-        </span>
-      ),
+      render: (item) => {
+        const limit = item.credit_limit || item.advance_balance || 0;
+        return (
+          <span className={limit > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
+            ₹{limit.toLocaleString("en-IN")}
+          </span>
+        );
+      },
     },
     {
       key: "is_active",

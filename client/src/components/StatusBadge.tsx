@@ -75,7 +75,8 @@ function getStatusColor(status: string, type: StatusBadgeProps["type"]) {
   }
 }
 
-function formatStatus(status: string): string {
+function formatStatus(status: string | undefined | null): string {
+  if (!status) return "Unknown";
   return status
     .split("_")
     .map((word) => word.charAt(0).toUpperCase() + word.slice(1))
@@ -83,6 +84,18 @@ function formatStatus(status: string): string {
 }
 
 export function StatusBadge({ status, type = "default", className }: StatusBadgeProps) {
+  if (!status) {
+    return (
+      <Badge 
+        variant="outline" 
+        className={cn("border font-medium bg-gray-500/10 text-gray-600 dark:text-gray-400 border-gray-500/20", className)}
+        data-testid="status-badge-unknown"
+      >
+        Unknown
+      </Badge>
+    );
+  }
+  
   const colorClass = getStatusColor(status, type);
 
   return (

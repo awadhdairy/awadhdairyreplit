@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Plus, Eye, Edit, Trash2, Milk, Filter, Download } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, Milk, Filter, Download, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,9 @@ import { Textarea } from "@/components/ui/textarea";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column, Action } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
+import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
+import { useCattle, useAddCattle, useUpdateCattle } from "@/hooks/useData";
 import type { Cattle, CattleStatus, LactationStatus, CattleType } from "@shared/types";
 
 // Sample data
@@ -101,7 +103,10 @@ const sampleCattle: Cattle[] = [
 const breeds = ["Gir", "Sahiwal", "HF Cross", "Jersey", "Murrah", "Mehsana", "Jaffarabadi", "Red Sindhi", "Tharparkar"];
 
 export default function CattlePage() {
-  const [cattle, setCattle] = useState<Cattle[]>(sampleCattle);
+  const { data: cattleData, isLoading } = useCattle();
+  const addCattleMutation = useAddCattle();
+  const updateCattleMutation = useUpdateCattle();
+  
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedCattle, setSelectedCattle] = useState<Cattle | null>(null);
@@ -119,17 +124,19 @@ export default function CattlePage() {
     notes: "",
   });
 
+  const cattle = cattleData || [];
+  
   const filteredCattle = filterStatus === "all" 
     ? cattle 
     : cattle.filter(c => c.status === filterStatus);
 
-  const stats = {
+  const stats = useMemo(() => ({
     total: cattle.length,
     active: cattle.filter((c) => c.status === "active").length,
-    lactating: cattle.filter((c) => c.lactation_status === "lactating").length,
-    pregnant: cattle.filter((c) => c.lactation_status === "pregnant").length,
-    dry: cattle.filter((c) => c.lactation_status === "dry").length,
-  };
+    lactating: cattle.filter((c) => c.category === "milking").length,
+    pregnant: cattle.filter((c) => c.category === "heifer").length,
+    dry: cattle.filter((c) => c.category === "dry").length,
+  }), [cattle]);
 
   const columns: Column<Cattle>[] = [
     {
@@ -152,37 +159,31 @@ export default function CattlePage() {
       sortable: true,
     },
     {
-      key: "cattle_type",
-      header: "Type",
+      key: "category",
+      header: "Category",
       render: (item) => (
         <Badge variant="outline" className="capitalize">
-          {item.cattle_type}
+          {item.category || item.cattle_type || "-"}
         </Badge>
       ),
     },
     {
       key: "status",
       header: "Status",
-      render: (item) => <StatusBadge status={item.status} type="cattle" />,
+      render: (item) => <StatusBadge status={item.status || "active"} type="cattle" />,
     },
     {
-      key: "lactation_status",
-      header: "Lactation",
-      render: (item) => <StatusBadge status={item.lactation_status} type="lactation" />,
-    },
-    {
-      key: "lactation_number",
-      header: "Lact. No.",
-      sortable: true,
+      key: "gender",
+      header: "Gender",
       render: (item) => (
-        <span className="text-center">{item.lactation_number}</span>
+        <span className="capitalize">{item.gender || "-"}</span>
       ),
     },
     {
-      key: "weight",
+      key: "weight_kg",
       header: "Weight (kg)",
       sortable: true,
-      render: (item) => item.weight ? `${item.weight} kg` : "-",
+      render: (item) => (item.weight_kg || item.weight) ? `${item.weight_kg || item.weight} kg` : "-",
     },
   ];
 
