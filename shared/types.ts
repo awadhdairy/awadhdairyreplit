@@ -122,10 +122,30 @@ export interface MilkVendor {
   phone?: string;
   address?: string;
   area?: string;
+  bank_name?: string;
+  account_number?: string;
+  ifsc_code?: string;
+  upi_id?: string;
+  default_rate?: number;
   is_active: boolean;
   current_balance: number;
+  total_procurement?: number;
+  total_paid?: number;
   notes?: string;
   created_at: string;
+}
+
+export interface VendorPayment {
+  id: string;
+  vendor_id: string;
+  vendor_name?: string;
+  payment_date: string;
+  amount: number;
+  payment_mode: 'cash' | 'bank_transfer' | 'upi' | 'cheque';
+  reference_number?: string;
+  notes?: string;
+  created_at: string;
+  vendor?: MilkVendor;
 }
 
 export interface MilkProcurement {

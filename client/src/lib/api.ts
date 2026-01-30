@@ -3,7 +3,7 @@ import { getStoredSession } from './supabase';
 import type { 
   Cattle, MilkProduction, Customer, Product, Delivery, Invoice, 
   Employee, Expense, HealthRecord, BreedingRecord, InventoryItem,
-  Equipment, Route
+  Equipment, Route, MilkVendor, VendorPayment, MilkProcurement
 } from '@shared/types';
 
 export const isDemo = () => getStoredSession()?.startsWith('demo-');
@@ -13,8 +13,14 @@ class DemoDataStore {
   private invoices: Invoice[] = [];
   private customers: Customer[] = [];
   private expenses: Expense[] = [];
+  private vendors: MilkVendor[] = [];
+  private vendorPayments: VendorPayment[] = [];
+  private procurement: MilkProcurement[] = [];
   private initialized = false;
   private expensesInitialized = false;
+  private vendorsInitialized = false;
+  private paymentsInitialized = false;
+  private procurementInitialized = false;
 
   initialize(invoices: Invoice[], customers: Customer[]) {
     if (!this.initialized) {
@@ -28,6 +34,27 @@ class DemoDataStore {
     if (!this.expensesInitialized) {
       this.expenses = [...expenses];
       this.expensesInitialized = true;
+    }
+  }
+
+  initializeVendors(vendors: MilkVendor[]) {
+    if (!this.vendorsInitialized) {
+      this.vendors = [...vendors];
+      this.vendorsInitialized = true;
+    }
+  }
+
+  initializePayments(payments: VendorPayment[]) {
+    if (!this.paymentsInitialized) {
+      this.vendorPayments = [...payments];
+      this.paymentsInitialized = true;
+    }
+  }
+
+  initializeProcurement(items: MilkProcurement[]) {
+    if (!this.procurementInitialized) {
+      this.procurement = [...items];
+      this.procurementInitialized = true;
     }
   }
 
@@ -75,6 +102,79 @@ class DemoDataStore {
 
   deleteExpense(id: string) {
     this.expenses = this.expenses.filter(e => e.id !== id);
+  }
+
+  // Vendor methods
+  getVendors(): MilkVendor[] {
+    return this.vendors;
+  }
+
+  addVendor(vendor: MilkVendor) {
+    this.vendors = [...this.vendors, vendor];
+  }
+
+  updateVendor(id: string, updates: Partial<MilkVendor>) {
+    this.vendors = this.vendors.map(v => 
+      v.id === id ? { ...v, ...updates } : v
+    );
+  }
+
+  deleteVendor(id: string) {
+    this.vendors = this.vendors.filter(v => v.id !== id);
+  }
+
+  // Vendor Payment methods
+  getVendorPayments(): VendorPayment[] {
+    return this.vendorPayments;
+  }
+
+  addVendorPayment(payment: VendorPayment) {
+    this.vendorPayments = [...this.vendorPayments, payment];
+    // Update vendor balance
+    const vendor = this.vendors.find(v => v.id === payment.vendor_id);
+    if (vendor) {
+      this.updateVendor(vendor.id, { 
+        current_balance: vendor.current_balance - payment.amount,
+        total_paid: (vendor.total_paid || 0) + payment.amount
+      });
+    }
+  }
+
+  // Procurement methods
+  getProcurement(): MilkProcurement[] {
+    return this.procurement;
+  }
+
+  addProcurement(item: MilkProcurement) {
+    this.procurement = [...this.procurement, item];
+    // Update vendor balance
+    const vendor = this.vendors.find(v => v.id === item.vendor_id);
+    if (vendor && item.total_amount) {
+      this.updateVendor(vendor.id, { 
+        current_balance: vendor.current_balance + item.total_amount,
+        total_procurement: (vendor.total_procurement || 0) + item.total_amount
+      });
+    }
+  }
+
+  updateProcurement(id: string, updates: Partial<MilkProcurement>) {
+    this.procurement = this.procurement.map(p => 
+      p.id === id ? { ...p, ...updates } : p
+    );
+  }
+
+  deleteProcurement(id: string) {
+    const item = this.procurement.find(p => p.id === id);
+    if (item) {
+      const vendor = this.vendors.find(v => v.id === item.vendor_id);
+      if (vendor && item.total_amount) {
+        this.updateVendor(vendor.id, { 
+          current_balance: vendor.current_balance - item.total_amount,
+          total_procurement: (vendor.total_procurement || 0) - item.total_amount
+        });
+      }
+    }
+    this.procurement = this.procurement.filter(p => p.id !== id);
   }
 }
 
@@ -149,6 +249,36 @@ export const DEMO_EXPENSES: Expense[] = [
   { id: '3', expense_date: new Date().toISOString().split('T')[0], amount: 8200, category: 'electricity', title: 'Electricity bill', notes: 'UPPCL monthly bill', created_at: new Date().toISOString() },
   { id: '4', expense_date: new Date().toISOString().split('T')[0], amount: 3500, category: 'transport', title: 'Vehicle fuel', notes: 'Indian Oil fuel', created_at: new Date().toISOString() },
   { id: '5', expense_date: new Date().toISOString().split('T')[0], amount: 12000, category: 'maintenance', title: 'Equipment repair', notes: 'Dairy Solutions service', created_at: new Date().toISOString() },
+];
+
+export const DEMO_VENDORS: MilkVendor[] = [
+  { id: '1', name: 'Ramesh Kumar', phone: '9876541101', address: 'Village Kheri, Lucknow', area: 'Kheri', bank_name: 'State Bank of India', account_number: '32145698710', ifsc_code: 'SBIN0001234', default_rate: 45, is_active: true, current_balance: 12500, total_procurement: 87500, total_paid: 75000, created_at: new Date().toISOString() },
+  { id: '2', name: 'Suresh Dairy Farm', phone: '9876541102', address: 'Mohanlalganj Road', area: 'Mohanlalganj', bank_name: 'Punjab National Bank', account_number: '45612398700', ifsc_code: 'PUNB0005678', upi_id: 'sureshdairy@upi', default_rate: 42, is_active: true, current_balance: 28000, total_procurement: 158000, total_paid: 130000, created_at: new Date().toISOString() },
+  { id: '3', name: 'Gopal Singh', phone: '9876541103', address: 'Bakshi ka Talab', area: 'Bakshi ka Talab', default_rate: 50, is_active: true, current_balance: 8500, total_procurement: 48500, total_paid: 40000, created_at: new Date().toISOString() },
+  { id: '4', name: 'Rajendra Yadav', phone: '9876541104', address: 'Sitapur Road, Lucknow', area: 'Sitapur Road', bank_name: 'Bank of Baroda', account_number: '78945612300', ifsc_code: 'BARB0009012', default_rate: 48, is_active: true, current_balance: 15800, total_procurement: 95800, total_paid: 80000, created_at: new Date().toISOString() },
+  { id: '5', name: 'Kisan Dairy Cooperative', phone: '9876541105', address: 'Chinhat Industrial Area', area: 'Chinhat', bank_name: 'HDFC Bank', account_number: '12345678900', ifsc_code: 'HDFC0003456', upi_id: 'kisandairy@hdfc', default_rate: 40, is_active: true, current_balance: 45000, total_procurement: 245000, total_paid: 200000, created_at: new Date().toISOString() },
+  { id: '6', name: 'Vijay Sharma', phone: '9876541106', address: 'Malihabad', area: 'Malihabad', default_rate: 44, is_active: false, current_balance: 0, total_procurement: 35000, total_paid: 35000, notes: 'Inactive - retired from dairy farming', created_at: new Date().toISOString() },
+];
+
+export const DEMO_VENDOR_PAYMENTS: VendorPayment[] = [
+  { id: '1', vendor_id: '1', vendor_name: 'Ramesh Kumar', payment_date: '2024-01-25', amount: 25000, payment_mode: 'bank_transfer', reference_number: 'TXN-2024-001', notes: 'Weekly payment', created_at: new Date().toISOString() },
+  { id: '2', vendor_id: '2', vendor_name: 'Suresh Dairy Farm', payment_date: '2024-01-25', amount: 40000, payment_mode: 'upi', reference_number: 'UPI-2024-001', notes: 'Weekly payment', created_at: new Date().toISOString() },
+  { id: '3', vendor_id: '3', vendor_name: 'Gopal Singh', payment_date: '2024-01-20', amount: 15000, payment_mode: 'cash', notes: 'Bi-weekly payment', created_at: new Date().toISOString() },
+  { id: '4', vendor_id: '4', vendor_name: 'Rajendra Yadav', payment_date: '2024-01-22', amount: 30000, payment_mode: 'bank_transfer', reference_number: 'TXN-2024-002', created_at: new Date().toISOString() },
+  { id: '5', vendor_id: '5', vendor_name: 'Kisan Dairy Cooperative', payment_date: '2024-01-28', amount: 50000, payment_mode: 'bank_transfer', reference_number: 'TXN-2024-003', notes: 'Monthly payment', created_at: new Date().toISOString() },
+  { id: '6', vendor_id: '1', vendor_name: 'Ramesh Kumar', payment_date: '2024-01-18', amount: 25000, payment_mode: 'bank_transfer', reference_number: 'TXN-2024-004', created_at: new Date().toISOString() },
+  { id: '7', vendor_id: '2', vendor_name: 'Suresh Dairy Farm', payment_date: '2024-01-18', amount: 45000, payment_mode: 'cheque', reference_number: 'CHQ-2024-001', created_at: new Date().toISOString() },
+];
+
+export const DEMO_PROCUREMENT: MilkProcurement[] = [
+  { id: '1', vendor_id: '1', vendor_name: 'Ramesh Kumar', procurement_date: new Date().toISOString().split('T')[0], session: 'morning', quantity_liters: 50, fat_percentage: 4.5, snf_percentage: 8.5, rate_per_liter: 45, total_amount: 2250, payment_status: 'pending', created_at: new Date().toISOString() },
+  { id: '2', vendor_id: '2', vendor_name: 'Suresh Dairy Farm', procurement_date: new Date().toISOString().split('T')[0], session: 'morning', quantity_liters: 80, fat_percentage: 4.2, snf_percentage: 8.3, rate_per_liter: 42, total_amount: 3360, payment_status: 'pending', created_at: new Date().toISOString() },
+  { id: '3', vendor_id: '1', vendor_name: 'Ramesh Kumar', procurement_date: new Date().toISOString().split('T')[0], session: 'evening', quantity_liters: 45, fat_percentage: 4.3, snf_percentage: 8.4, rate_per_liter: 45, total_amount: 2025, payment_status: 'pending', created_at: new Date().toISOString() },
+  { id: '4', vendor_id: '3', vendor_name: 'Gopal Singh', procurement_date: new Date().toISOString().split('T')[0], session: 'morning', quantity_liters: 60, fat_percentage: 5.0, snf_percentage: 8.8, rate_per_liter: 50, total_amount: 3000, payment_status: 'pending', created_at: new Date().toISOString() },
+  { id: '5', vendor_id: '4', vendor_name: 'Rajendra Yadav', procurement_date: new Date().toISOString().split('T')[0], session: 'morning', quantity_liters: 70, fat_percentage: 4.8, snf_percentage: 8.6, rate_per_liter: 48, total_amount: 3360, payment_status: 'pending', created_at: new Date().toISOString() },
+  { id: '6', vendor_id: '5', vendor_name: 'Kisan Dairy Cooperative', procurement_date: new Date().toISOString().split('T')[0], session: 'morning', quantity_liters: 150, fat_percentage: 4.0, snf_percentage: 8.2, rate_per_liter: 40, total_amount: 6000, payment_status: 'pending', created_at: new Date().toISOString() },
+  { id: '7', vendor_id: '2', vendor_name: 'Suresh Dairy Farm', procurement_date: new Date().toISOString().split('T')[0], session: 'evening', quantity_liters: 75, fat_percentage: 4.4, snf_percentage: 8.5, rate_per_liter: 42, total_amount: 3150, payment_status: 'pending', created_at: new Date().toISOString() },
+  { id: '8', vendor_id: '5', vendor_name: 'Kisan Dairy Cooperative', procurement_date: new Date().toISOString().split('T')[0], session: 'evening', quantity_liters: 120, fat_percentage: 4.1, snf_percentage: 8.3, rate_per_liter: 40, total_amount: 4800, payment_status: 'pending', created_at: new Date().toISOString() },
 ];
 
 export const DEMO_EMPLOYEES: Employee[] = [
@@ -285,6 +415,36 @@ export async function fetchHealthRecords(): Promise<HealthRecord[]> {
 export async function fetchBreedingRecords(): Promise<BreedingRecord[]> {
   if (isDemo()) return DEMO_BREEDING;
   const { data, error } = await supabase.from('breeding_records').select('*').order('breeding_date', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchVendors(): Promise<MilkVendor[]> {
+  if (isDemo()) {
+    demoStore.initializeVendors(DEMO_VENDORS);
+    return demoStore.getVendors();
+  }
+  const { data, error } = await supabase.from('milk_vendors').select('*').order('name');
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchVendorPayments(): Promise<VendorPayment[]> {
+  if (isDemo()) {
+    demoStore.initializePayments(DEMO_VENDOR_PAYMENTS);
+    return demoStore.getVendorPayments();
+  }
+  const { data, error } = await supabase.from('vendor_payments').select('*').order('payment_date', { ascending: false });
+  if (error) throw error;
+  return data || [];
+}
+
+export async function fetchProcurement(): Promise<MilkProcurement[]> {
+  if (isDemo()) {
+    demoStore.initializeProcurement(DEMO_PROCUREMENT);
+    return demoStore.getProcurement();
+  }
+  const { data, error } = await supabase.from('milk_procurement').select('*').order('procurement_date', { ascending: false });
   if (error) throw error;
   return data || [];
 }

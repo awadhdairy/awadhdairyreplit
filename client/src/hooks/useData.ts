@@ -4,10 +4,10 @@ import {
   fetchCattle, fetchProduction, fetchCustomers, fetchProducts,
   fetchRoutes, fetchDeliveries, fetchInvoices, fetchExpenses,
   fetchEmployees, fetchInventory, fetchEquipment, fetchHealthRecords,
-  fetchBreedingRecords, getDashboardStats,
-  DEMO_CATTLE, DEMO_CUSTOMERS, DEMO_PRODUCTS, DEMO_ROUTES, demoStore, isDemo
+  fetchBreedingRecords, fetchVendors, fetchVendorPayments, fetchProcurement, getDashboardStats,
+  DEMO_CATTLE, DEMO_CUSTOMERS, DEMO_PRODUCTS, DEMO_ROUTES, DEMO_VENDORS, demoStore, isDemo
 } from '@/lib/api';
-import type { Cattle, Customer, Product, MilkProduction, Delivery, Invoice, HealthRecord, BreedingRecord } from '@shared/types';
+import type { Cattle, Customer, Product, MilkProduction, Delivery, Invoice, HealthRecord, BreedingRecord, MilkVendor, VendorPayment, MilkProcurement } from '@shared/types';
 
 export function useCattle() {
   return useQuery({
@@ -458,5 +458,218 @@ export function getLookups() {
     customers: isDemo() ? DEMO_CUSTOMERS : [],
     products: isDemo() ? DEMO_PRODUCTS : [],
     routes: isDemo() ? DEMO_ROUTES : [],
+    vendors: isDemo() ? DEMO_VENDORS : [],
   };
+}
+
+// Vendor hooks
+export function useVendors() {
+  return useQuery({
+    queryKey: ['vendors'],
+    queryFn: fetchVendors,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAddVendor() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (vendor: Omit<MilkVendor, 'id' | 'created_at'>) => {
+      if (isDemo()) {
+        const newVendor: MilkVendor = {
+          id: `demo-${Date.now()}`,
+          ...vendor,
+          current_balance: 0,
+          total_procurement: 0,
+          total_paid: 0,
+          created_at: new Date().toISOString(),
+        };
+        demoStore.addVendor(newVendor);
+        return newVendor;
+      }
+      const { data, error } = await supabase.from('milk_vendors').insert(vendor).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
+}
+
+export function useUpdateVendor() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<MilkVendor> & { id: string }) => {
+      if (isDemo()) {
+        demoStore.updateVendor(id, updates);
+        return { id, ...updates };
+      }
+      const { data, error } = await supabase.from('milk_vendors').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
+}
+
+export function useDeleteVendor() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (isDemo()) {
+        demoStore.deleteVendor(id);
+        return { id };
+      }
+      const { error } = await supabase.from('milk_vendors').delete().eq('id', id);
+      if (error) throw error;
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
+}
+
+// Vendor Payment hooks
+export function useVendorPayments() {
+  return useQuery({
+    queryKey: ['vendor-payments'],
+    queryFn: fetchVendorPayments,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useAddVendorPayment() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (payment: Omit<VendorPayment, 'id' | 'created_at'>) => {
+      if (isDemo()) {
+        const newPayment: VendorPayment = {
+          id: `demo-${Date.now()}`,
+          ...payment,
+          created_at: new Date().toISOString(),
+        };
+        demoStore.addVendorPayment(newPayment);
+        return newPayment;
+      }
+      const { data, error } = await supabase.from('vendor_payments').insert(payment).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+  });
+}
+
+export function useAddBulkVendorPayments() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (payments: Array<Omit<VendorPayment, 'id' | 'created_at'>>) => {
+      if (isDemo()) {
+        const newPayments = payments.map((payment, index) => {
+          const newPayment: VendorPayment = {
+            id: `demo-${Date.now()}-${index}`,
+            ...payment,
+            created_at: new Date().toISOString(),
+          };
+          demoStore.addVendorPayment(newPayment);
+          return newPayment;
+        });
+        return newPayments;
+      }
+      const { data, error } = await supabase.from('vendor_payments').insert(payments).select();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['vendor-payments'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+    },
+  });
+}
+
+// Procurement hooks
+export function useProcurement() {
+  return useQuery({
+    queryKey: ['procurement'],
+    queryFn: fetchProcurement,
+    staleTime: 2 * 60 * 1000,
+  });
+}
+
+export function useAddProcurement() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (item: Omit<MilkProcurement, 'id' | 'created_at'>) => {
+      if (isDemo()) {
+        const newItem: MilkProcurement = {
+          id: `demo-${Date.now()}`,
+          ...item,
+          created_at: new Date().toISOString(),
+        };
+        demoStore.addProcurement(newItem);
+        return newItem;
+      }
+      const { data, error } = await supabase.from('milk_procurement').insert(item).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procurement'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
+}
+
+export function useUpdateProcurement() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<MilkProcurement> & { id: string }) => {
+      if (isDemo()) {
+        demoStore.updateProcurement(id, updates);
+        return { id, ...updates };
+      }
+      const { data, error } = await supabase.from('milk_procurement').update(updates).eq('id', id).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procurement'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
+}
+
+export function useDeleteProcurement() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (isDemo()) {
+        demoStore.deleteProcurement(id);
+        return { id };
+      }
+      const { error } = await supabase.from('milk_procurement').delete().eq('id', id);
+      if (error) throw error;
+      return { id };
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['procurement'] });
+      queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
 }
