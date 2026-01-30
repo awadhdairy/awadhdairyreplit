@@ -116,7 +116,7 @@ export default function DeliveriesPage() {
   const [filterArea, setFilterArea] = useState<string>("all");
   const { toast } = useToast();
 
-  const areas = [...new Set(deliveries.map((d) => d.customerArea))];
+  const areas = Array.from(new Set(deliveries.map((d) => d.customerArea)));
 
   const filteredDeliveries = deliveries.filter((d) => {
     const matchesStatus = filterStatus === "all" || d.status === filterStatus;

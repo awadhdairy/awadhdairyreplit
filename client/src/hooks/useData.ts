@@ -139,9 +139,9 @@ export function useDashboardStats() {
       ]);
 
       const today = new Date().toISOString().split('T')[0];
-      const todayProduction = production.filter(p => p.collection_date === today);
+      const todayProduction = production.filter(p => p.production_date === today);
       const totalMilk = todayProduction.reduce((sum, p) => sum + (p.quantity_liters || 0), 0);
-      const activeCattle = cattle.filter(c => c.status === 'active' && c.category === 'milking').length;
+      const activeCattle = cattle.filter(c => c.status === 'active' && c.lactation_status === 'lactating').length;
       
       return {
         todayProduction: totalMilk,
@@ -150,11 +150,11 @@ export function useDashboardStats() {
         totalCattle: cattle.length,
         activeCustomers: customers.filter(c => c.is_active).length,
         pendingDeliveries: deliveries.filter(d => d.status === 'pending').length,
-        completedDeliveries: deliveries.filter(d => d.status === 'completed').length,
+        completedDeliveries: deliveries.filter(d => d.status === 'delivered').length,
         monthlyRevenue: invoices.reduce((sum, i) => sum + (i.paid_amount || 0), 0),
-        outstandingAmount: customers.reduce((sum, c) => sum + (c.outstanding_balance || 0), 0),
+        outstandingAmount: customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0),
         lowStockItems: inventory.filter(i => i.quantity <= i.min_stock_level).length,
-        pendingExpenses: expenses.filter(e => e.status === 'pending').length,
+        pendingExpenses: expenses.length,
         avgFatContent: todayProduction.length > 0 
           ? todayProduction.reduce((sum, p) => sum + (p.fat_percentage || 0), 0) / todayProduction.length 
           : 0,

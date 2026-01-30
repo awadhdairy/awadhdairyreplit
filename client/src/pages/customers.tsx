@@ -130,8 +130,8 @@ export default function CustomersPage() {
   const stats = useMemo(() => ({
     total: customers.length,
     active: customers.filter((c) => c.is_active).length,
-    credit: customers.reduce((sum, c) => sum + (c.credit_balance || c.outstanding_balance || 0), 0),
-    advance: customers.reduce((sum, c) => sum + (c.advance_balance || c.credit_limit || 0), 0),
+    credit: customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0),
+    advance: customers.reduce((sum, c) => sum + (c.advance_balance || 0), 0),
   }), [customers]);
 
   const columns: Column<Customer>[] = [
@@ -163,20 +163,20 @@ export default function CustomersPage() {
       ),
     },
     {
-      key: "customer_type",
+      key: "subscription_type",
       header: "Type",
       render: (item) => (
         <Badge variant="secondary" className="capitalize">
-          {item.customer_type || item.subscription_type || "individual"}
+          {item.subscription_type || "daily"}
         </Badge>
       ),
     },
     {
-      key: "outstanding_balance",
-      header: "Outstanding",
+      key: "credit_balance",
+      header: "Credit Due",
       sortable: true,
       render: (item) => {
-        const balance = item.outstanding_balance || item.credit_balance || 0;
+        const balance = item.credit_balance || 0;
         return (
           <span className={balance > 0 ? "text-red-600 font-medium" : "text-muted-foreground"}>
             ₹{balance.toLocaleString("en-IN")}
@@ -185,14 +185,14 @@ export default function CustomersPage() {
       },
     },
     {
-      key: "credit_limit",
-      header: "Credit Limit",
+      key: "advance_balance",
+      header: "Advance",
       sortable: true,
       render: (item) => {
-        const limit = item.credit_limit || item.advance_balance || 0;
+        const advance = item.advance_balance || 0;
         return (
-          <span className={limit > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
-            ₹{limit.toLocaleString("en-IN")}
+          <span className={advance > 0 ? "text-green-600 font-medium" : "text-muted-foreground"}>
+            ₹{advance.toLocaleString("en-IN")}
           </span>
         );
       },
@@ -301,7 +301,7 @@ export default function CustomersPage() {
       );
     } else {
       addCustomerMutation.mutate(
-        { ...customerPayload, is_active: true, outstanding_balance: 0, credit_limit: 0 },
+        { ...customerPayload, is_active: true, credit_balance: 0, advance_balance: 0 },
         {
           onSuccess: () => {
             toast({

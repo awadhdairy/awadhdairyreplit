@@ -465,6 +465,25 @@ export interface ActivityLog {
   created_at: string;
 }
 
+// Type aliases for backwards compatibility
+export type HealthRecord = CattleHealth;
+export type Route = DeliveryRoute;
+export type AuditLog = ActivityLog;
+
+// Inventory Item type
+export interface InventoryItem {
+  id: string;
+  name: string;
+  category: string;
+  sku?: string;
+  unit: string;
+  quantity: number;
+  min_stock_level: number;
+  unit_price?: number;
+  is_active: boolean;
+  created_at: string;
+}
+
 export interface DairySettings {
   id: string;
   dairy_name: string;
