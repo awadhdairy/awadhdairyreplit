@@ -427,6 +427,31 @@ export function useAddBreedingRecord() {
   });
 }
 
+export function useAddExpense() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (expense: { category: string; title: string; amount: number; expense_date: string; notes?: string }) => {
+      if (isDemo()) {
+        const newExpense = { 
+          id: `demo-${Date.now()}`, 
+          ...expense, 
+          created_at: new Date().toISOString() 
+        };
+        demoStore.addExpense(newExpense as any);
+        return newExpense;
+      }
+      const { data, error } = await supabase.from('expenses').insert(expense).select().single();
+      if (error) throw error;
+      return data;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['expenses'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
 export function getLookups() {
   return {
     cattle: isDemo() ? DEMO_CATTLE : [],

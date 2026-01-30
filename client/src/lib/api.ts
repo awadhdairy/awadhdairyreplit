@@ -12,13 +12,22 @@ export const isDemo = () => getStoredSession()?.startsWith('demo-');
 class DemoDataStore {
   private invoices: Invoice[] = [];
   private customers: Customer[] = [];
+  private expenses: Expense[] = [];
   private initialized = false;
+  private expensesInitialized = false;
 
   initialize(invoices: Invoice[], customers: Customer[]) {
     if (!this.initialized) {
       this.invoices = [...invoices];
       this.customers = [...customers];
       this.initialized = true;
+    }
+  }
+
+  initializeExpenses(expenses: Expense[]) {
+    if (!this.expensesInitialized) {
+      this.expenses = [...expenses];
+      this.expensesInitialized = true;
     }
   }
 
@@ -48,6 +57,24 @@ class DemoDataStore {
     this.customers = this.customers.map(c => 
       c.id === id ? { ...c, ...updates } : c
     );
+  }
+
+  getExpenses(): Expense[] {
+    return this.expenses;
+  }
+
+  addExpense(expense: Expense) {
+    this.expenses = [...this.expenses, expense];
+  }
+
+  updateExpense(id: string, updates: Partial<Expense>) {
+    this.expenses = this.expenses.map(e => 
+      e.id === id ? { ...e, ...updates } : e
+    );
+  }
+
+  deleteExpense(id: string) {
+    this.expenses = this.expenses.filter(e => e.id !== id);
   }
 }
 
@@ -218,7 +245,10 @@ export async function fetchInvoices(): Promise<Invoice[]> {
 }
 
 export async function fetchExpenses(): Promise<Expense[]> {
-  if (isDemo()) return DEMO_EXPENSES;
+  if (isDemo()) {
+    demoStore.initializeExpenses(DEMO_EXPENSES);
+    return demoStore.getExpenses();
+  }
   const { data, error } = await supabase.from('expenses').select('*').order('expense_date', { ascending: false });
   if (error) throw error;
   return data || [];
