@@ -170,14 +170,19 @@ export function useAddCattle() {
   return useMutation({
     mutationFn: async (cattle: Partial<Cattle>) => {
       if (isDemo()) {
-        return { id: `demo-${Date.now()}`, ...cattle };
+        const newCattle = { id: `demo-${Date.now()}`, created_at: new Date().toISOString(), ...cattle } as Cattle;
+        return newCattle;
       }
       const { data, error } = await supabase.from('cattle').insert(cattle).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cattle'] });
+    onSuccess: (data) => {
+      if (isDemo() && data) {
+        queryClient.setQueryData(['cattle'], (old: Cattle[] | undefined) => [...(old || []), data]);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['cattle'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -188,13 +193,42 @@ export function useUpdateCattle() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Cattle> & { id: string }) => {
-      if (isDemo()) return { id, ...updates };
+      if (isDemo()) return { id, ...updates } as Cattle;
       const { data, error } = await supabase.from('cattle').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['cattle'] });
+    onSuccess: (data) => {
+      if (isDemo() && data) {
+        queryClient.setQueryData(['cattle'], (old: Cattle[] | undefined) => 
+          (old || []).map(c => c.id === data.id ? { ...c, ...data } : c)
+        );
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['cattle'] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useDeleteCattle() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (isDemo()) return { id, success: true };
+      const { error } = await supabase.from('cattle').delete().eq('id', id);
+      if (error) throw error;
+      return { id, success: true };
+    },
+    onSuccess: (data) => {
+      if (isDemo() && data?.id) {
+        queryClient.setQueryData(['cattle'], (old: Cattle[] | undefined) => 
+          (old || []).filter(c => c.id !== data.id)
+        );
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['cattle'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -222,13 +256,20 @@ export function useAddCustomer() {
   
   return useMutation({
     mutationFn: async (customer: Partial<Customer>) => {
-      if (isDemo()) return { id: `demo-${Date.now()}`, ...customer };
+      if (isDemo()) {
+        const newCustomer = { id: `demo-${Date.now()}`, created_at: new Date().toISOString(), ...customer } as Customer;
+        return newCustomer;
+      }
       const { data, error } = await supabase.from('customers').insert(customer).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    onSuccess: (data) => {
+      if (isDemo() && data) {
+        queryClient.setQueryData(['customers'], (old: Customer[] | undefined) => [...(old || []), data]);
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
+      }
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -239,13 +280,42 @@ export function useUpdateCustomer() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Customer> & { id: string }) => {
-      if (isDemo()) return { id, ...updates };
+      if (isDemo()) return { id, ...updates } as Customer;
       const { data, error } = await supabase.from('customers').update(updates).eq('id', id).select().single();
       if (error) throw error;
       return data;
     },
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ['customers'] });
+    onSuccess: (data) => {
+      if (isDemo() && data) {
+        queryClient.setQueryData(['customers'], (old: Customer[] | undefined) => 
+          (old || []).map(c => c.id === data.id ? { ...c, ...data } : c)
+        );
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
+      }
+    },
+  });
+}
+
+export function useDeleteCustomer() {
+  const queryClient = useQueryClient();
+  
+  return useMutation({
+    mutationFn: async (id: string) => {
+      if (isDemo()) return { id, success: true };
+      const { error } = await supabase.from('customers').delete().eq('id', id);
+      if (error) throw error;
+      return { id, success: true };
+    },
+    onSuccess: (data) => {
+      if (isDemo() && data?.id) {
+        queryClient.setQueryData(['customers'], (old: Customer[] | undefined) => 
+          (old || []).filter(c => c.id !== data.id)
+        );
+      } else {
+        queryClient.invalidateQueries({ queryKey: ['customers'] });
+      }
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
 }

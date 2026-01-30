@@ -27,7 +27,7 @@ import { DataTable, Column, Action } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import { useCattle, useAddCattle, useUpdateCattle } from "@/hooks/useData";
+import { useCattle, useAddCattle, useUpdateCattle, useDeleteCattle } from "@/hooks/useData";
 import type { Cattle, CattleStatus, LactationStatus, CattleType } from "@shared/types";
 
 // Sample data
@@ -106,6 +106,7 @@ export default function CattlePage() {
   const { data: cattleData, isLoading } = useCattle();
   const addCattleMutation = useAddCattle();
   const updateCattleMutation = useUpdateCattle();
+  const deleteCattleMutation = useDeleteCattle();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -226,10 +227,20 @@ export default function CattlePage() {
     {
       label: "Delete",
       onClick: (item) => {
-        setCattle((prev) => prev.filter((c) => c.id !== item.id));
-        toast({
-          title: "Cattle Deleted",
-          description: `${item.name || item.tag_number} has been removed`,
+        deleteCattleMutation.mutate(item.id, {
+          onSuccess: () => {
+            toast({
+              title: "Cattle Deleted",
+              description: `${item.name || item.tag_number} has been removed`,
+            });
+          },
+          onError: () => {
+            toast({
+              title: "Error",
+              description: "Failed to delete cattle",
+              variant: "destructive",
+            });
+          },
         });
       },
       icon: Trash2,
@@ -247,47 +258,59 @@ export default function CattlePage() {
       return;
     }
 
+    const cattlePayload = {
+      tag_number: formData.tag_number,
+      name: formData.name || undefined,
+      breed: formData.breed,
+      cattle_type: formData.cattle_type,
+      date_of_birth: formData.date_of_birth || undefined,
+      weight_kg: formData.weight ? parseFloat(formData.weight) : undefined,
+      notes: formData.notes || undefined,
+    };
+
     if (selectedCattle) {
       // Update existing
-      setCattle((prev) =>
-        prev.map((c) =>
-          c.id === selectedCattle.id
-            ? {
-                ...c,
-                ...formData,
-                weight: formData.weight ? parseFloat(formData.weight) : undefined,
-              }
-            : c
-        )
+      updateCattleMutation.mutate(
+        { id: selectedCattle.id, ...cattlePayload },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Cattle Updated",
+              description: `${formData.name || formData.tag_number} has been updated`,
+            });
+            resetForm();
+          },
+          onError: () => {
+            toast({
+              title: "Error",
+              description: "Failed to update cattle",
+              variant: "destructive",
+            });
+          },
+        }
       );
-      toast({
-        title: "Cattle Updated",
-        description: `${formData.name || formData.tag_number} has been updated`,
-      });
     } else {
       // Create new
-      const newCattle: Cattle = {
-        id: Date.now().toString(),
-        tag_number: formData.tag_number,
-        name: formData.name || undefined,
-        breed: formData.breed,
-        cattle_type: formData.cattle_type,
-        date_of_birth: formData.date_of_birth || undefined,
-        status: "active",
-        lactation_status: "dry",
-        weight: formData.weight ? parseFloat(formData.weight) : undefined,
-        lactation_number: 0,
-        notes: formData.notes || undefined,
-        created_at: new Date().toISOString(),
-      };
-      setCattle((prev) => [...prev, newCattle]);
-      toast({
-        title: "Cattle Added",
-        description: `${formData.name || formData.tag_number} has been added to the herd`,
-      });
+      addCattleMutation.mutate(
+        { ...cattlePayload, status: "active", category: "milking" },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Cattle Added",
+              description: `${formData.name || formData.tag_number} has been added to the herd`,
+            });
+            resetForm();
+          },
+          onError: () => {
+            toast({
+              title: "Error",
+              description: "Failed to add cattle",
+              variant: "destructive",
+            });
+          },
+        }
+      );
     }
-
-    resetForm();
   };
 
   const resetForm = () => {

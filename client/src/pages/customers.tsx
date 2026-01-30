@@ -28,7 +28,7 @@ import { DataTable, Column, Action } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import { useCustomers, useAddCustomer, useUpdateCustomer } from "@/hooks/useData";
+import { useCustomers, useAddCustomer, useUpdateCustomer, useDeleteCustomer } from "@/hooks/useData";
 import type { Customer, SubscriptionType } from "@shared/types";
 
 // Sample data
@@ -107,6 +107,7 @@ export default function CustomersPage() {
   const { data: customersData, isLoading } = useCustomers();
   const addCustomerMutation = useAddCustomer();
   const updateCustomerMutation = useUpdateCustomer();
+  const deleteCustomerMutation = useDeleteCustomer();
   
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -237,10 +238,20 @@ export default function CustomersPage() {
     {
       label: "Delete",
       onClick: (item) => {
-        setCustomers((prev) => prev.filter((c) => c.id !== item.id));
-        toast({
-          title: "Customer Deleted",
-          description: `${item.name} has been removed`,
+        deleteCustomerMutation.mutate(item.id, {
+          onSuccess: () => {
+            toast({
+              title: "Customer Deleted",
+              description: `${item.name} has been removed`,
+            });
+          },
+          onError: () => {
+            toast({
+              title: "Error",
+              description: "Failed to delete customer",
+              variant: "destructive",
+            });
+          },
         });
       },
       icon: Trash2,
@@ -258,35 +269,57 @@ export default function CustomersPage() {
       return;
     }
 
-    if (selectedCustomer) {
-      setCustomers((prev) =>
-        prev.map((c) =>
-          c.id === selectedCustomer.id
-            ? { ...c, ...formData }
-            : c
-        )
-      );
-      toast({
-        title: "Customer Updated",
-        description: `${formData.name} has been updated`,
-      });
-    } else {
-      const newCustomer: Customer = {
-        id: Date.now().toString(),
-        ...formData,
-        credit_balance: 0,
-        advance_balance: 0,
-        is_active: true,
-        created_at: new Date().toISOString(),
-      };
-      setCustomers((prev) => [...prev, newCustomer]);
-      toast({
-        title: "Customer Added",
-        description: `${formData.name} has been added`,
-      });
-    }
+    const customerPayload = {
+      name: formData.name,
+      phone: formData.phone || undefined,
+      email: formData.email || undefined,
+      address: formData.address || undefined,
+      area: formData.area || undefined,
+      customer_type: formData.subscription_type,
+      notes: formData.notes || undefined,
+    };
 
-    resetForm();
+    if (selectedCustomer) {
+      updateCustomerMutation.mutate(
+        { id: selectedCustomer.id, ...customerPayload },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Customer Updated",
+              description: `${formData.name} has been updated`,
+            });
+            resetForm();
+          },
+          onError: () => {
+            toast({
+              title: "Error",
+              description: "Failed to update customer",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    } else {
+      addCustomerMutation.mutate(
+        { ...customerPayload, is_active: true, outstanding_balance: 0, credit_limit: 0 },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Customer Added",
+              description: `${formData.name} has been added`,
+            });
+            resetForm();
+          },
+          onError: () => {
+            toast({
+              title: "Error",
+              description: "Failed to add customer",
+              variant: "destructive",
+            });
+          },
+        }
+      );
+    }
   };
 
   const resetForm = () => {
