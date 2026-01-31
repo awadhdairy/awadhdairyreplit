@@ -86,10 +86,13 @@ export interface Cattle {
   name?: string;
   breed: string;
   cattle_type: CattleType;
+  gender?: 'male' | 'female';
   date_of_birth?: string;
   status: CattleStatus;
   lactation_status: LactationStatus;
   weight?: number;
+  weight_kg?: number;
+  category?: string;
   sire_id?: string;
   dam_id?: string;
   lactation_number: number;

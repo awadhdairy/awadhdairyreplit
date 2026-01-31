@@ -27,8 +27,9 @@ import { DataTable, Column, Action } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import { useCattle, useAddCattle, useUpdateCattle, useDeleteCattle } from "@/hooks/useData";
-import type { Cattle, CattleStatus, LactationStatus, CattleType } from "@shared/types";
+import { useCattle, useAddCattle, useUpdateCattle, useDeleteCattle, useHealthRecords } from "@/hooks/useData";
+import type { Cattle, CattleStatus, LactationStatus, CattleType, HealthRecord } from "@shared/types";
+import { Syringe, Stethoscope, Activity, AlertCircle } from "lucide-react";
 
 // Sample data
 const sampleCattle: Cattle[] = [
@@ -104,6 +105,7 @@ const breeds = ["Gir", "Sahiwal", "HF Cross", "Jersey", "Murrah", "Mehsana", "Ja
 
 export default function CattlePage() {
   const { data: cattleData, isLoading } = useCattle();
+  const { data: healthRecords } = useHealthRecords();
   const addCattleMutation = useAddCattle();
   const updateCattleMutation = useUpdateCattle();
   const deleteCattleMutation = useDeleteCattle();
@@ -113,6 +115,21 @@ export default function CattlePage() {
   const [selectedCattle, setSelectedCattle] = useState<Cattle | null>(null);
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const { toast } = useToast();
+
+  const selectedCattleHealth = useMemo(() => {
+    if (!healthRecords || !selectedCattle) return [];
+    return healthRecords.filter(record => record.cattle_id === selectedCattle.id);
+  }, [healthRecords, selectedCattle]);
+
+  const getHealthIcon = (recordType: string) => {
+    switch (recordType) {
+      case 'vaccination': return <Syringe className="h-4 w-4 text-primary" />;
+      case 'treatment': return <Activity className="h-4 w-4 text-destructive" />;
+      case 'checkup': return <Stethoscope className="h-4 w-4 text-primary" />;
+      case 'disease': return <AlertCircle className="h-4 w-4 text-destructive" />;
+      default: return <Stethoscope className="h-4 w-4 text-muted-foreground" />;
+    }
+  };
 
   // Form state
   const [formData, setFormData] = useState({
@@ -554,9 +571,12 @@ export default function CattlePage() {
 
       {/* View Details Dialog */}
       <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-lg">
+        <DialogContent className="max-w-xl max-h-[85vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Cattle Details</DialogTitle>
+            <DialogDescription>
+              View complete information and health history
+            </DialogDescription>
           </DialogHeader>
 
           {selectedCattle && (
@@ -585,12 +605,16 @@ export default function CattlePage() {
                   <StatusBadge status={selectedCattle.lactation_status} type="lactation" />
                 </div>
                 <div className="p-3 rounded-lg border">
+                  <p className="text-sm text-muted-foreground">Gender</p>
+                  <p className="font-medium capitalize" data-testid="text-cattle-gender">{selectedCattle.gender || "-"}</p>
+                </div>
+                <div className="p-3 rounded-lg border">
                   <p className="text-sm text-muted-foreground">Type</p>
                   <p className="font-medium capitalize">{selectedCattle.cattle_type}</p>
                 </div>
                 <div className="p-3 rounded-lg border">
                   <p className="text-sm text-muted-foreground">Weight</p>
-                  <p className="font-medium">{selectedCattle.weight || "-"} kg</p>
+                  <p className="font-medium">{selectedCattle.weight || selectedCattle.weight_kg || "-"} kg</p>
                 </div>
                 <div className="p-3 rounded-lg border">
                   <p className="text-sm text-muted-foreground">Lactation #</p>
@@ -608,6 +632,41 @@ export default function CattlePage() {
                   <p className="mt-1">{selectedCattle.notes}</p>
                 </div>
               )}
+
+              {/* Health History Section */}
+              <div className="space-y-3" data-testid="section-health-history">
+                <h4 className="font-semibold flex items-center gap-2">
+                  <Stethoscope className="h-4 w-4 text-primary" />
+                  Health History
+                </h4>
+                {selectedCattleHealth.length > 0 ? (
+                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                    {selectedCattleHealth.map((record) => (
+                      <div key={record.id} className="p-3 rounded-lg border flex items-start gap-3" data-testid={`health-record-${record.id}`}>
+                        <div className="mt-0.5">{getHealthIcon(record.record_type)}</div>
+                        <div className="flex-1 min-w-0">
+                          <div className="flex items-center justify-between gap-2">
+                            <p className="font-medium text-sm truncate" data-testid={`text-health-title-${record.id}`}>{record.title}</p>
+                            <Badge variant="outline" className="text-xs capitalize shrink-0">
+                              {record.record_type}
+                            </Badge>
+                          </div>
+                          <p className="text-xs text-muted-foreground mt-1">{record.description}</p>
+                          <div className="flex items-center justify-between mt-2 text-xs text-muted-foreground">
+                            <span data-testid={`text-health-date-${record.id}`}>{record.record_date}</span>
+                            {record.vet_name && <span>{record.vet_name}</span>}
+                            {record.cost && <span className="font-medium text-foreground" data-testid={`text-health-cost-${record.id}`}>₹{record.cost}</span>}
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className="p-4 rounded-lg border border-dashed text-center text-muted-foreground text-sm" data-testid="text-no-health-records">
+                    No health records found for this cattle
+                  </div>
+                )}
+              </div>
             </div>
           )}
 

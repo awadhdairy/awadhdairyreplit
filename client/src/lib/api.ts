@@ -181,14 +181,14 @@ class DemoDataStore {
 export const demoStore = new DemoDataStore();
 
 export const DEMO_CATTLE: Cattle[] = [
-  { id: '1', tag_number: 'AWD-001', name: 'Lakshmi', breed: 'Gir', date_of_birth: '2020-03-15', cattle_type: 'cow', status: 'active', lactation_status: 'lactating', weight: 450, lactation_number: 3, created_at: new Date().toISOString() },
-  { id: '2', tag_number: 'AWD-002', name: 'Ganga', breed: 'Sahiwal', date_of_birth: '2019-08-20', cattle_type: 'cow', status: 'active', lactation_status: 'lactating', weight: 480, lactation_number: 4, created_at: new Date().toISOString() },
-  { id: '3', tag_number: 'AWD-003', name: 'Nandi', breed: 'Gir', date_of_birth: '2018-12-10', cattle_type: 'buffalo', status: 'active', lactation_status: 'dry', weight: 650, lactation_number: 0, created_at: new Date().toISOString() },
-  { id: '4', tag_number: 'AWD-004', name: 'Radha', breed: 'Jersey Cross', date_of_birth: '2021-05-22', cattle_type: 'cow', status: 'active', lactation_status: 'pregnant', weight: 320, lactation_number: 0, created_at: new Date().toISOString() },
-  { id: '5', tag_number: 'AWD-005', name: 'Saraswati', breed: 'Sahiwal', date_of_birth: '2020-11-08', cattle_type: 'cow', status: 'active', lactation_status: 'lactating', weight: 460, lactation_number: 2, created_at: new Date().toISOString() },
-  { id: '6', tag_number: 'AWD-006', name: 'Gauri', breed: 'Holstein', date_of_birth: '2019-04-18', cattle_type: 'cow', status: 'dry', lactation_status: 'dry', weight: 520, lactation_number: 3, created_at: new Date().toISOString() },
-  { id: '7', tag_number: 'AWD-007', name: 'Chotu', breed: 'Gir', date_of_birth: '2023-09-01', cattle_type: 'buffalo', status: 'active', lactation_status: 'calving', weight: 85, lactation_number: 0, created_at: new Date().toISOString() },
-  { id: '8', tag_number: 'AWD-008', name: 'Parvati', breed: 'Red Sindhi', date_of_birth: '2020-07-12', cattle_type: 'cow', status: 'active', lactation_status: 'lactating', weight: 410, lactation_number: 2, created_at: new Date().toISOString() },
+  { id: '1', tag_number: 'AWD-001', name: 'Lakshmi', breed: 'Gir', date_of_birth: '2020-03-15', cattle_type: 'cow', gender: 'female', status: 'active', lactation_status: 'lactating', weight: 450, lactation_number: 3, created_at: new Date().toISOString() },
+  { id: '2', tag_number: 'AWD-002', name: 'Ganga', breed: 'Sahiwal', date_of_birth: '2019-08-20', cattle_type: 'cow', gender: 'female', status: 'active', lactation_status: 'lactating', weight: 480, lactation_number: 4, created_at: new Date().toISOString() },
+  { id: '3', tag_number: 'AWD-003', name: 'Nandi', breed: 'Gir', date_of_birth: '2018-12-10', cattle_type: 'buffalo', gender: 'male', status: 'active', lactation_status: 'dry', weight: 650, lactation_number: 0, created_at: new Date().toISOString() },
+  { id: '4', tag_number: 'AWD-004', name: 'Radha', breed: 'Jersey Cross', date_of_birth: '2021-05-22', cattle_type: 'cow', gender: 'female', status: 'active', lactation_status: 'pregnant', weight: 320, lactation_number: 0, created_at: new Date().toISOString() },
+  { id: '5', tag_number: 'AWD-005', name: 'Saraswati', breed: 'Sahiwal', date_of_birth: '2020-11-08', cattle_type: 'cow', gender: 'female', status: 'active', lactation_status: 'lactating', weight: 460, lactation_number: 2, created_at: new Date().toISOString() },
+  { id: '6', tag_number: 'AWD-006', name: 'Gauri', breed: 'Holstein', date_of_birth: '2019-04-18', cattle_type: 'cow', gender: 'female', status: 'dry', lactation_status: 'dry', weight: 520, lactation_number: 3, created_at: new Date().toISOString() },
+  { id: '7', tag_number: 'AWD-007', name: 'Chotu', breed: 'Gir', date_of_birth: '2023-09-01', cattle_type: 'buffalo', gender: 'male', status: 'active', lactation_status: 'calving', weight: 85, lactation_number: 0, created_at: new Date().toISOString() },
+  { id: '8', tag_number: 'AWD-008', name: 'Parvati', breed: 'Red Sindhi', date_of_birth: '2020-07-12', cattle_type: 'cow', gender: 'female', status: 'active', lactation_status: 'lactating', weight: 410, lactation_number: 2, created_at: new Date().toISOString() },
 ];
 
 export const DEMO_PRODUCTION: MilkProduction[] = [
