@@ -98,26 +98,26 @@ function StatCard({ title, value, change, icon: Icon, color, link }: StatCardPro
 
   const content = (
     <Card className="hover-elevate cursor-pointer transition-all duration-200">
-      <CardContent className="p-6">
-        <div className="flex items-start justify-between">
-          <div className="flex flex-col gap-1">
-            <span className="text-sm text-muted-foreground">{title}</span>
-            <span className="text-2xl font-bold tracking-tight">{value}</span>
+      <CardContent className="p-4 md:p-6">
+        <div className="flex items-start justify-between gap-2">
+          <div className="flex flex-col gap-0.5 min-w-0">
+            <span className="text-xs md:text-sm text-muted-foreground truncate">{title}</span>
+            <span className="text-xl md:text-2xl font-bold tracking-tight">{value}</span>
             {change !== undefined && (
-              <div className="flex items-center gap-1 mt-1">
+              <div className="hidden md:flex items-center gap-1 mt-1">
                 {isPositive ? (
                   <TrendingUp className="h-3 w-3 text-green-500" />
                 ) : (
                   <TrendingDown className="h-3 w-3 text-red-500" />
                 )}
                 <span className={`text-xs ${isPositive ? "text-green-500" : "text-red-500"}`}>
-                  {isPositive ? "+" : ""}{change}% from last week
+                  {isPositive ? "+" : ""}{change}%
                 </span>
               </div>
             )}
           </div>
-          <div className={`p-3 rounded-xl ${color}`}>
-            <Icon className="h-5 w-5" />
+          <div className={`p-2 md:p-3 rounded-xl shrink-0 ${color}`}>
+            <Icon className="h-4 w-4 md:h-5 md:w-5" />
           </div>
         </div>
       </CardContent>
@@ -278,72 +278,72 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
-      {/* Welcome Section */}
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
+      {/* Welcome Section - Mobile optimized */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col md:flex-row md:items-center md:justify-between gap-4"
+        className="flex flex-col gap-3"
       >
         <div>
-          <h1 className="text-2xl md:text-3xl font-bold tracking-tight">
-            Welcome back, {user?.full_name?.split(" ")[0] || "User"}!
+          <h1 className="text-xl md:text-3xl font-bold tracking-tight">
+            Welcome, {user?.full_name?.split(" ")[0] || "User"}!
           </h1>
-          <p className="text-muted-foreground mt-1">
-            Here's what's happening at your dairy today
+          <p className="text-sm md:text-base text-muted-foreground">
+            Here's what's happening today
           </p>
         </div>
-        <div className="flex items-center gap-3">
-          <Badge variant="secondary" className="px-3 py-1">
+        <div className="flex items-center gap-2 flex-wrap">
+          <Badge variant="secondary" className="px-2 py-0.5 text-xs">
             {user?.role ? roleLabels[user.role] : "Staff"}
           </Badge>
-          <Badge variant="outline" className="px-3 py-1">
-            <Calendar className="h-3 w-3 mr-1.5" />
+          <Badge variant="outline" className="px-2 py-0.5 text-xs">
+            <Calendar className="h-3 w-3 mr-1" />
             {format(new Date(), "dd MMM yyyy")}
           </Badge>
         </div>
       </motion.div>
 
-      {/* Quick Actions */}
+      {/* Quick Actions - Horizontal scroll on mobile */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5, delay: 0.1 }}
-        className="flex flex-wrap gap-2"
+        className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap"
       >
         <Link href="/production">
-          <Button variant="default" size="sm" data-testid="button-quick-production">
-            <Milk className="h-4 w-4 mr-2" />
-            Record Production
+          <Button variant="default" size="sm" className="whitespace-nowrap" data-testid="button-quick-production">
+            <Milk className="h-4 w-4 mr-1.5" />
+            <span className="hidden sm:inline">Record</span> Production
           </Button>
         </Link>
         <Link href="/deliveries">
-          <Button variant="outline" size="sm" data-testid="button-quick-deliveries">
-            <Truck className="h-4 w-4 mr-2" />
-            View Deliveries
+          <Button variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-quick-deliveries">
+            <Truck className="h-4 w-4 mr-1.5" />
+            Deliveries
           </Button>
         </Link>
         <Link href="/cattle">
-          <Button variant="outline" size="sm" data-testid="button-quick-cattle">
-            <Package className="h-4 w-4 mr-2" />
-            Manage Cattle
+          <Button variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-quick-cattle">
+            <Package className="h-4 w-4 mr-1.5" />
+            Cattle
           </Button>
         </Link>
         <Link href="/billing">
-          <Button variant="outline" size="sm" data-testid="button-quick-billing">
-            <IndianRupee className="h-4 w-4 mr-2" />
-            Generate Invoice
+          <Button variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-quick-billing">
+            <IndianRupee className="h-4 w-4 mr-1.5" />
+            Invoice
           </Button>
         </Link>
       </motion.div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - 2 columns on mobile */}
       <motion.div
         variants={containerVariants}
         initial="hidden"
         animate="visible"
-        className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4"
+        className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
       >
         <motion.div variants={itemVariants}>
           <StatCard
@@ -388,7 +388,7 @@ export default function DashboardPage() {
       </motion.div>
 
       {/* Charts Row */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
         {/* Production Trend */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -396,22 +396,22 @@ export default function DashboardPage() {
           transition={{ duration: 0.5, delay: 0.3 }}
         >
           <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">7-Day Production Trend</CardTitle>
-                  <CardDescription>Morning and evening milk production</CardDescription>
+            <CardHeader className="p-4 md:pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <CardTitle className="text-base md:text-lg truncate">Production Trend</CardTitle>
+                  <CardDescription className="text-xs md:text-sm hidden sm:block">Morning and evening milk</CardDescription>
                 </div>
                 <Link href="/production">
-                  <Button variant="ghost" size="sm">
-                    View All
-                    <ArrowRight className="h-4 w-4 ml-1" />
+                  <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3">
+                    <span className="hidden sm:inline">View All</span>
+                    <ArrowRight className="h-4 w-4 sm:ml-1" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="h-[280px]">
+            <CardContent className="p-4 pt-0">
+              <div className="h-[200px] md:h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={productionData}>
                     <defs>
@@ -464,31 +464,31 @@ export default function DashboardPage() {
           transition={{ duration: 0.5, delay: 0.4 }}
         >
           <Card>
-            <CardHeader className="pb-2">
-              <div className="flex items-center justify-between">
-                <div>
-                  <CardTitle className="text-lg">Cattle Composition</CardTitle>
-                  <CardDescription>Current herd status breakdown</CardDescription>
+            <CardHeader className="p-4 md:pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <CardTitle className="text-base md:text-lg truncate">Cattle Breakdown</CardTitle>
+                  <CardDescription className="text-xs md:text-sm hidden sm:block">Current herd status</CardDescription>
                 </div>
                 <Link href="/cattle">
-                  <Button variant="ghost" size="sm">
-                    View All
-                    <ArrowRight className="h-4 w-4 ml-1" />
+                  <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3">
+                    <span className="hidden sm:inline">View All</span>
+                    <ArrowRight className="h-4 w-4 sm:ml-1" />
                   </Button>
                 </Link>
               </div>
             </CardHeader>
-            <CardContent>
-              <div className="h-[280px] flex items-center">
-                <div className="w-1/2">
-                  <ResponsiveContainer width="100%" height={200}>
+            <CardContent className="p-4 pt-0">
+              <div className="h-[200px] md:h-[280px] flex items-center">
+                <div className="w-2/5 md:w-1/2">
+                  <ResponsiveContainer width="100%" height={160}>
                     <PieChart>
                       <Pie
                         data={cattleComposition}
                         cx="50%"
                         cy="50%"
-                        innerRadius={50}
-                        outerRadius={80}
+                        innerRadius={35}
+                        outerRadius={60}
                         paddingAngle={2}
                         dataKey="value"
                       >
@@ -506,17 +506,17 @@ export default function DashboardPage() {
                     </PieChart>
                   </ResponsiveContainer>
                 </div>
-                <div className="w-1/2 space-y-3">
+                <div className="w-3/5 md:w-1/2 space-y-2 md:space-y-3">
                   {cattleComposition.map((item) => (
                     <div key={item.name} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2">
+                      <div className="flex items-center gap-1.5 md:gap-2">
                         <div
-                          className="w-3 h-3 rounded-full"
+                          className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full"
                           style={{ backgroundColor: item.color }}
                         />
-                        <span className="text-sm">{item.name}</span>
+                        <span className="text-xs md:text-sm">{item.name}</span>
                       </div>
-                      <span className="text-sm font-medium">{item.value}</span>
+                      <span className="text-xs md:text-sm font-medium">{item.value}</span>
                     </div>
                   ))}
                 </div>
