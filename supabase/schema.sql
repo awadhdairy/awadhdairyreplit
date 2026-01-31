@@ -406,7 +406,55 @@ CREATE TABLE IF NOT EXISTS equipment_maintenance (
 );
 
 -- ============================================
--- Procurement
+-- Milk Procurement (Vendors)
+-- ============================================
+CREATE TABLE IF NOT EXISTS milk_vendors (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  name VARCHAR(255) NOT NULL,
+  phone VARCHAR(15),
+  email VARCHAR(255),
+  address TEXT,
+  village VARCHAR(100),
+  bank_account VARCHAR(50),
+  ifsc_code VARCHAR(20),
+  cattle_count INTEGER DEFAULT 0,
+  is_active BOOLEAN DEFAULT true,
+  created_at TIMESTAMPTZ DEFAULT NOW(),
+  updated_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS milk_procurement (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  vendor_id UUID REFERENCES milk_vendors(id) ON DELETE CASCADE,
+  collection_date DATE NOT NULL,
+  shift VARCHAR(20) CHECK (shift IN ('morning', 'evening')),
+  quantity_liters DECIMAL(10,2) NOT NULL,
+  fat_percentage DECIMAL(5,2),
+  snf_percentage DECIMAL(5,2),
+  rate_per_liter DECIMAL(10,2),
+  total_amount DECIMAL(10,2),
+  quality_grade VARCHAR(20) DEFAULT 'A' CHECK (quality_grade IN ('A', 'B', 'C', 'rejected')),
+  notes TEXT,
+  recorded_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS vendor_payments (
+  id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
+  vendor_id UUID REFERENCES milk_vendors(id) ON DELETE CASCADE,
+  payment_date DATE NOT NULL,
+  amount DECIMAL(10,2) NOT NULL,
+  payment_method VARCHAR(50) CHECK (payment_method IN ('cash', 'upi', 'bank_transfer', 'cheque')),
+  reference_number VARCHAR(100),
+  period_from DATE,
+  period_to DATE,
+  notes TEXT,
+  created_by UUID REFERENCES profiles(id),
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+-- ============================================
+-- Procurement (Suppliers)
 -- ============================================
 CREATE TABLE IF NOT EXISTS suppliers (
   id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
@@ -585,14 +633,21 @@ CREATE INDEX IF NOT EXISTS idx_health_records_cattle ON health_records(cattle_id
 CREATE INDEX IF NOT EXISTS idx_breeding_records_cattle ON breeding_records(cattle_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_user ON audit_logs(user_id);
 CREATE INDEX IF NOT EXISTS idx_audit_logs_created ON audit_logs(created_at);
+CREATE INDEX IF NOT EXISTS idx_milk_procurement_date ON milk_procurement(collection_date);
+CREATE INDEX IF NOT EXISTS idx_milk_procurement_vendor ON milk_procurement(vendor_id);
+CREATE INDEX IF NOT EXISTS idx_vendor_payments_date ON vendor_payments(payment_date);
+CREATE INDEX IF NOT EXISTS idx_vendor_payments_vendor ON vendor_payments(vendor_id);
 
 -- ============================================
 -- Insert Default Data
 -- ============================================
 
--- Insert default admin user (PIN: 123456)
+-- Insert default admin users (PIN: 123456)
 INSERT INTO profiles (full_name, phone, pin_hash, role, is_active)
-VALUES ('Admin User', '9876543210', hash_pin('123456'), 'super_admin', true)
+VALUES 
+  ('Admin User', '9876543210', hash_pin('123456'), 'super_admin', true),
+  ('Manager User', '9876543211', hash_pin('123456'), 'manager', true),
+  ('Delivery User', '9876543212', hash_pin('123456'), 'delivery_staff', true)
 ON CONFLICT (phone) DO NOTHING;
 
 -- Insert expense categories

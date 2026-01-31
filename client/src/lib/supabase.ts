@@ -34,7 +34,7 @@ export function getStoredUser(): any | null {
 async function hashPin(pin: string): Promise<string> {
   const salt = 'awadh_dairy_salt';
   const encoder = new TextEncoder();
-  const data = encoder.encode(salt + pin);
+  const data = encoder.encode(pin + salt);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
   const hashArray = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map(b => b.toString(16).padStart(2, '0')).join('');
@@ -353,7 +353,7 @@ export const api = {
 
   employees: {
     getAll: async () => {
-      const { data, error } = await supabase.from('employees').select('*').order('name');
+      const { data, error } = await supabase.from('employees').select('*, profiles(full_name, phone)').order('created_at', { ascending: false });
       if (error) throw new Error(error.message);
       return data;
     },

@@ -4,17 +4,16 @@
 
 Awadh Dairy is a comprehensive dairy farm and milk distribution management ERP system designed for daily operational use. The application manages cattle, milk production, customer subscriptions, deliveries, billing, employees, inventory, and equipment for a dairy farm operation.
 
-The system is built as a full-stack TypeScript application with a React frontend and Express backend, using Replit's PostgreSQL database with Drizzle ORM for data storage and custom PIN-based authentication.
+The system is built as a **frontend-only React application** that connects directly to **Supabase** for database, authentication, and backend services. It is designed for deployment on **Vercel** as a static site.
 
 ## Recent Changes (January 2026)
 
-### Database Migration: Supabase to Replit PostgreSQL
-- Migrated from Supabase to Replit's built-in PostgreSQL database
-- Implemented custom PIN-based authentication with SHA256 hashing (salt: 'awadh_dairy_salt')
-- Added server-side session management with 24-hour token expiry
-- All API routes now protected with Bearer token authentication middleware
-- Added Zod validation for all POST/PUT endpoints using drizzle-zod schemas
-- Removed @supabase/supabase-js dependency
+### Migration to Supabase + Vercel Deployment
+- **Removed Express backend** - All backend logic moved to Supabase client
+- **Supabase integration** - Using Supabase PostgreSQL for database, custom PIN-based auth
+- **Vercel-ready** - Configured for static deployment with `npm run build`
+- **Direct database access** - Frontend uses `@supabase/supabase-js` client directly
+- **Schema SQL** - Complete database schema in `supabase/schema.sql` (execute in Supabase SQL Editor)
 
 ### Default Admin Users
 - Phone: 9876543210, PIN: 123456 (Admin)
@@ -36,53 +35,46 @@ Preferred communication style: Simple, everyday language.
 - **Charts**: Recharts for data visualization
 - **Animations**: Framer Motion
 - **Date Handling**: date-fns
+- **Database Client**: @supabase/supabase-js
 
-### Backend Architecture
-- **Runtime**: Node.js with Express
-- **Language**: TypeScript with ESM modules
-- **Build Tool**: Vite for frontend, esbuild for server bundling
-- **API Pattern**: RESTful endpoints prefixed with `/api`
-- **Database**: Replit PostgreSQL with Drizzle ORM
-- **Authentication**: Custom PIN-based auth with session tokens
+### Backend Architecture (Supabase)
+- **Database**: Supabase PostgreSQL
+- **Authentication**: Custom PIN-based auth with SHA256 hashing
+- **Session Management**: user_sessions table with 24-hour token expiry
+- **API Pattern**: Direct Supabase client operations (no REST API layer)
 
 ### Authentication System
 - Custom PIN-based authentication (6-digit PIN with phone number)
-- Server-side session management with 24-hour token expiry
-- SHA256 password hashing with salt
-- Bearer token authentication for all protected API endpoints
+- Client-side session management stored in localStorage
+- SHA256 password hashing with salt ('awadh_dairy_salt')
 - Role-based access control with 7 user roles: super_admin, manager, accountant, delivery_staff, farm_worker, vet_staff, auditor
 
 ### Data Layer
-- **ORM**: Drizzle ORM with PostgreSQL dialect
-- **Schema Validation**: Zod with drizzle-zod integration
-- **Database**: Replit PostgreSQL (Neon-backed)
-- **Schema Location**: `shared/schema.ts` (30+ tables)
-- **Connection**: Uses DATABASE_URL environment variable
+- **Database**: Supabase PostgreSQL
+- **Client**: @supabase/supabase-js v2
+- **Schema Location**: `supabase/schema.sql` (30+ tables)
+- **API Layer**: `client/src/lib/supabase.ts`
 
 ### Project Structure
 ```
-├── client/           # React frontend application
+├── client/               # React frontend application
 │   └── src/
 │       ├── components/   # Reusable UI components
 │       ├── contexts/     # React contexts (Auth)
 │       ├── hooks/        # Custom React hooks
-│       ├── lib/          # Utilities and API client
+│       ├── lib/          # Utilities and Supabase client
+│       │   └── supabase.ts  # All database operations
 │       └── pages/        # Page components
-├── server/           # Express backend
-│   ├── index.ts      # Server entry point
-│   ├── routes.ts     # API route definitions with auth middleware
-│   ├── storage.ts    # Database operations via Drizzle
-│   └── db.ts         # Database connection
-├── shared/           # Shared types and schemas
-│   ├── schema.ts     # Drizzle database schema (30+ tables)
-│   └── types.ts      # TypeScript type definitions
-└── drizzle.config.ts # Drizzle configuration
+├── supabase/             # Supabase configuration
+│   └── schema.sql        # Complete database schema (run in Supabase SQL Editor)
+├── shared/               # Shared types and schemas
+│   └── types.ts          # TypeScript type definitions
+├── vite.config.ts        # Vite configuration for static build
+└── vercel.json           # Vercel deployment configuration
 ```
 
 ### Key Design Patterns
-- **Storage Interface**: Database operations via Drizzle ORM in `server/storage.ts`
-- **Auth Middleware**: Bearer token validation for protected routes
-- **Request Validation**: Zod schemas for all POST/PUT endpoints
+- **Supabase API**: All CRUD operations in `client/src/lib/supabase.ts`
 - **Protected Routes**: Authentication wrapper for dashboard routes
 - **Component Composition**: PageHeader, DataTable, StatusBadge as reusable patterns
 - **Theme System**: CSS variable-based theming with light/dark mode support
@@ -98,7 +90,7 @@ Preferred communication style: Simple, everyday language.
 - **Equipment**: equipment, equipment_maintenance
 - **Procurement**: milk_vendors, milk_procurement, vendor_payments
 - **Suppliers**: suppliers, purchase_orders, purchase_order_items
-- **System**: audit_logs, dairy_settings
+- **System**: audit_logs, settings
 
 ### Modern Animation System
 The UI includes extensive animations and modern effects:
@@ -128,24 +120,35 @@ The UI includes extensive animations and modern effects:
 
 ## Environment Variables
 
-### Required
-- `DATABASE_URL`: PostgreSQL connection string (auto-provided by Replit)
+### Required for Supabase
+- `VITE_SUPABASE_URL`: Supabase project URL
+- `VITE_SUPABASE_ANON_KEY`: Supabase anon/public key
 
-### Optional (No longer required after Supabase migration)
-- ~~`VITE_SUPABASE_URL`~~: Removed - was Supabase project URL
-- ~~`VITE_SUPABASE_PUBLISHABLE_KEY`~~: Removed - was Supabase anon/public key
+## Deployment
 
-## Database Commands
+### Vercel Deployment
+1. Connect your GitHub repository to Vercel
+2. Set environment variables in Vercel project settings:
+   - `VITE_SUPABASE_URL`
+   - `VITE_SUPABASE_ANON_KEY`
+3. Deploy - Vercel will automatically run `npm run build`
 
-- `npm run db:push` - Push schema changes to database
-- `npm run db:push --force` - Force push schema (use with caution)
+### Supabase Setup
+1. Create a new Supabase project
+2. Go to SQL Editor and run the contents of `supabase/schema.sql`
+3. Copy your project URL and anon key to environment variables
+
+## Development Commands
+
+- `npm run dev` - Start Vite dev server
+- `npm run build` - Build for production (outputs to `dist/`)
+- `npm run preview` - Preview production build locally
 
 ## Third-Party Libraries
 - **PDF Generation**: jsPDF with jspdf-autotable (for reports/invoices)
 - **Excel Export**: xlsx library
-- **Database**: drizzle-orm with pg driver
+- **Database**: @supabase/supabase-js
 
 ## Development Tools
-- Replit-specific plugins for development (cartographer, dev-banner, runtime-error-modal)
 - TypeScript with strict mode enabled
 - Path aliases: `@/` for client/src, `@shared/` for shared directory
