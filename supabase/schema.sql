@@ -671,4 +671,193 @@ INSERT INTO settings (key, value, description) VALUES
   ('gst_rate', '5', 'GST percentage')
 ON CONFLICT (key) DO NOTHING;
 
+-- ============================================
+-- Demo Data for Testing
+-- ============================================
+
+-- Demo Cattle
+INSERT INTO cattle (tag_number, name, breed, date_of_birth, gender, category, status, weight_kg, purchase_price, notes) VALUES
+  ('COW-001', 'Lakshmi', 'Gir', '2020-03-15', 'female', 'milking', 'active', 450.00, 85000.00, 'High milk yield cow'),
+  ('COW-002', 'Ganga', 'Sahiwal', '2019-08-22', 'female', 'milking', 'active', 420.00, 75000.00, 'Excellent fat content'),
+  ('COW-003', 'Kamadhenu', 'Gir', '2021-01-10', 'female', 'milking', 'active', 380.00, 90000.00, 'Premium quality milk'),
+  ('COW-004', 'Nandini', 'HF Cross', '2020-06-05', 'female', 'milking', 'active', 500.00, 65000.00, 'Good health record'),
+  ('COW-005', 'Surabhi', 'Sahiwal', '2022-02-18', 'female', 'heifer', 'active', 280.00, 55000.00, 'Ready for first calving'),
+  ('COW-006', 'Gauri', 'Jersey Cross', '2018-11-30', 'female', 'dry', 'active', 440.00, 60000.00, 'Dry period - expected calving soon'),
+  ('COW-007', 'Chandan', 'Gir', '2019-04-12', 'male', 'bull', 'active', 650.00, 120000.00, 'Breeding bull'),
+  ('COW-008', 'Moti', 'Sahiwal', '2023-05-20', 'female', 'calf', 'active', 85.00, 25000.00, 'Female calf'),
+  ('COW-009', 'Raja', 'HF Cross', '2023-07-08', 'male', 'calf', 'active', 95.00, 20000.00, 'Male calf'),
+  ('COW-010', 'Sundari', 'Gir', '2021-09-14', 'female', 'milking', 'active', 410.00, 88000.00, 'Consistent producer')
+ON CONFLICT (tag_number) DO NOTHING;
+
+-- Demo Products
+INSERT INTO products (name, sku, category, unit, price_per_unit, cost_per_unit, stock_quantity, min_stock_level, description, is_active) VALUES
+  ('Fresh Cow Milk', 'MILK-001', 'raw_milk', 'liters', 60.00, 45.00, 500.00, 100.00, 'Fresh raw cow milk - daily collection', true),
+  ('Pasteurized Milk', 'MILK-002', 'pasteurized_milk', 'liters', 65.00, 50.00, 200.00, 50.00, 'Pasteurized and packaged milk', true),
+  ('Fresh Curd', 'CURD-001', 'curd', 'kg', 80.00, 55.00, 100.00, 20.00, 'Homemade fresh curd', true),
+  ('Buttermilk', 'BMLK-001', 'buttermilk', 'liters', 30.00, 15.00, 150.00, 30.00, 'Traditional buttermilk (chaas)', true),
+  ('Pure Ghee', 'GHEE-001', 'ghee', 'kg', 600.00, 450.00, 50.00, 10.00, 'Pure desi cow ghee', true),
+  ('Fresh Paneer', 'PANR-001', 'paneer', 'kg', 350.00, 250.00, 30.00, 5.00, 'Fresh cottage cheese', true),
+  ('Butter', 'BUTR-001', 'butter', 'kg', 450.00, 320.00, 25.00, 5.00, 'Fresh white butter', true),
+  ('Cream', 'CREM-001', 'cream', 'kg', 200.00, 140.00, 20.00, 5.00, 'Fresh milk cream', true)
+ON CONFLICT (sku) DO NOTHING;
+
+-- Demo Routes
+INSERT INTO routes (name, code, description, area, vehicle_number, estimated_time_minutes, total_customers, is_active) VALUES
+  ('Gomti Nagar Route', 'R-01', 'Gomti Nagar and surrounding areas', 'Gomti Nagar, Vikas Nagar', 'UP32-AB-1234', 120, 45, true),
+  ('Hazratganj Route', 'R-02', 'Central Lucknow commercial area', 'Hazratganj, Aminabad', 'UP32-CD-5678', 90, 35, true),
+  ('Indira Nagar Route', 'R-03', 'Indira Nagar residential area', 'Indira Nagar, Faizabad Road', 'UP32-EF-9012', 100, 40, true),
+  ('Aliganj Route', 'R-04', 'Aliganj and nearby localities', 'Aliganj, Kapoorthala', 'UP32-GH-3456', 80, 30, true),
+  ('Mahanagar Route', 'R-05', 'Mahanagar colony deliveries', 'Mahanagar, Nirala Nagar', 'UP32-IJ-7890', 70, 25, true)
+ON CONFLICT (code) DO NOTHING;
+
+-- Demo Customers
+INSERT INTO customers (name, phone, email, customer_type, address, city, pincode, delivery_priority, credit_limit, outstanding_balance, is_active, notes) VALUES
+  ('Sharma Family', '9876543001', 'sharma.family@email.com', 'individual', '123 Gomti Nagar, Sector 12', 'Lucknow', '226010', 1, 5000.00, 1200.00, true, 'Regular daily delivery - 2L milk'),
+  ('Hotel Royal Palace', '9876543002', 'royalpalace@hotel.com', 'hotel', '456 Hazratganj Main Road', 'Lucknow', '226001', 2, 50000.00, 15000.00, true, 'Large hotel - bulk orders'),
+  ('Sagar Restaurant', '9876543003', 'sagar@restaurant.com', 'restaurant', '789 Aminabad', 'Lucknow', '226018', 1, 20000.00, 5500.00, true, 'Daily paneer and curd orders'),
+  ('Gupta General Store', '9876543004', 'guptastore@email.com', 'shop', '321 Indira Nagar', 'Lucknow', '226016', 3, 30000.00, 8000.00, true, 'Retail store - weekly bulk'),
+  ('St. Mary School', '9876543005', 'stmary@school.edu', 'institution', '654 Mahanagar Colony', 'Lucknow', '226006', 2, 40000.00, 12000.00, true, 'School canteen supply'),
+  ('Verma Residence', '9876543006', 'verma.res@email.com', 'individual', '987 Aliganj', 'Lucknow', '226024', 1, 3000.00, 500.00, true, 'Daily 1L milk delivery'),
+  ('Krishna Sweets', '9876543007', 'krishna@sweets.com', 'shop', '147 Chowk', 'Lucknow', '226003', 1, 25000.00, 9000.00, true, 'Sweet shop - ghee and milk'),
+  ('The Grand Hotel', '9876543008', 'grand@hotel.com', 'hotel', '258 Vibhuti Khand', 'Lucknow', '226010', 2, 60000.00, 22000.00, true, '5-star hotel - premium products'),
+  ('Mishra Dairy Distributor', '9876543009', 'mishra@distributor.com', 'distributor', '369 Alambagh', 'Lucknow', '226005', 3, 100000.00, 35000.00, true, 'Bulk distributor'),
+  ('Patel Family', '9876543010', 'patel.fam@email.com', 'individual', '741 Jankipuram', 'Lucknow', '226021', 1, 4000.00, 800.00, true, 'Daily 1.5L milk')
+ON CONFLICT DO NOTHING;
+
+-- Demo Milk Vendors (farmers who supply milk)
+INSERT INTO milk_vendors (name, phone, address, village, bank_account, ifsc_code, cattle_count, is_active) VALUES
+  ('Ramesh Kumar', '9898765001', 'Village Bakshi Ka Talab', 'Bakshi Ka Talab', '1234567890123456', 'SBIN0001234', 8, true),
+  ('Suresh Yadav', '9898765002', 'Village Mohanlalganj', 'Mohanlalganj', '2345678901234567', 'PUNB0002345', 12, true),
+  ('Mahesh Singh', '9898765003', 'Village Malihabad', 'Malihabad', '3456789012345678', 'HDFC0003456', 6, true),
+  ('Dinesh Patel', '9898765004', 'Village Kakori', 'Kakori', '4567890123456789', 'ICIC0004567', 10, true),
+  ('Rajesh Verma', '9898765005', 'Village Itaunja', 'Itaunja', '5678901234567890', 'AXIS0005678', 15, true)
+ON CONFLICT DO NOTHING;
+
+-- Demo Milk Procurement (today's date references)
+INSERT INTO milk_procurement (vendor_id, collection_date, shift, quantity_liters, fat_percentage, snf_percentage, rate_per_liter, total_amount, quality_grade, notes)
+SELECT v.id, CURRENT_DATE, 'morning', 45.50, 4.2, 8.5, 42.00, 1911.00, 'A', 'Good quality morning collection'
+FROM milk_vendors v WHERE v.name = 'Ramesh Kumar'
+UNION ALL
+SELECT v.id, CURRENT_DATE, 'morning', 65.00, 4.5, 8.8, 44.00, 2860.00, 'A', 'Premium quality'
+FROM milk_vendors v WHERE v.name = 'Suresh Yadav'
+UNION ALL
+SELECT v.id, CURRENT_DATE, 'morning', 35.00, 3.8, 8.2, 40.00, 1400.00, 'B', 'Standard quality'
+FROM milk_vendors v WHERE v.name = 'Mahesh Singh'
+UNION ALL
+SELECT v.id, CURRENT_DATE - 1, 'evening', 50.00, 4.0, 8.4, 41.00, 2050.00, 'A', 'Evening collection'
+FROM milk_vendors v WHERE v.name = 'Dinesh Patel'
+UNION ALL
+SELECT v.id, CURRENT_DATE - 1, 'morning', 80.00, 4.3, 8.6, 43.00, 3440.00, 'A', 'Large farm supply'
+FROM milk_vendors v WHERE v.name = 'Rajesh Verma';
+
+-- Demo Milk Production (from own cattle)
+INSERT INTO milk_production (cattle_id, collection_date, shift, quantity_liters, fat_percentage, snf_percentage, quality_grade, notes)
+SELECT c.id, CURRENT_DATE, 'morning', 12.5, 4.5, 8.7, 'A', 'Excellent morning yield'
+FROM cattle c WHERE c.tag_number = 'COW-001'
+UNION ALL
+SELECT c.id, CURRENT_DATE, 'morning', 10.0, 4.2, 8.5, 'A', 'Good production'
+FROM cattle c WHERE c.tag_number = 'COW-002'
+UNION ALL
+SELECT c.id, CURRENT_DATE, 'morning', 14.0, 4.8, 8.9, 'A', 'Premium quality'
+FROM cattle c WHERE c.tag_number = 'COW-003'
+UNION ALL
+SELECT c.id, CURRENT_DATE, 'morning', 18.0, 3.5, 8.2, 'A', 'High volume'
+FROM cattle c WHERE c.tag_number = 'COW-004'
+UNION ALL
+SELECT c.id, CURRENT_DATE, 'evening', 11.0, 4.4, 8.6, 'A', 'Evening milking'
+FROM cattle c WHERE c.tag_number = 'COW-001'
+UNION ALL
+SELECT c.id, CURRENT_DATE, 'evening', 9.5, 4.1, 8.4, 'A', 'Evening collection'
+FROM cattle c WHERE c.tag_number = 'COW-002'
+UNION ALL
+SELECT c.id, CURRENT_DATE - 1, 'morning', 13.0, 4.6, 8.8, 'A', 'Yesterday morning'
+FROM cattle c WHERE c.tag_number = 'COW-010';
+
+-- Demo Employees
+INSERT INTO employees (employee_code, department, designation, joining_date, salary, bank_account, ifsc_code, emergency_contact, emergency_name, is_active) VALUES
+  ('EMP-001', 'Production', 'Farm Supervisor', '2022-01-15', 25000.00, '9876543210123456', 'SBIN0001234', '9876500001', 'Sita Devi', true),
+  ('EMP-002', 'Delivery', 'Delivery Driver', '2022-03-20', 18000.00, '8765432109876543', 'HDFC0002345', '9876500002', 'Ram Kumar', true),
+  ('EMP-003', 'Production', 'Milking Staff', '2021-08-10', 15000.00, '7654321098765432', 'ICIC0003456', '9876500003', 'Geeta Devi', true),
+  ('EMP-004', 'Accounts', 'Accountant', '2020-05-01', 30000.00, '6543210987654321', 'AXIS0004567', '9876500004', 'Shyam Singh', true),
+  ('EMP-005', 'Delivery', 'Delivery Helper', '2023-02-14', 12000.00, '5432109876543210', 'PUNB0005678', '9876500005', 'Radha Devi', true),
+  ('EMP-006', 'Production', 'Cattle Caretaker', '2021-11-25', 14000.00, '4321098765432109', 'SBIN0006789', '9876500006', 'Mohan Lal', true)
+ON CONFLICT (employee_code) DO NOTHING;
+
+-- Demo Expenses
+INSERT INTO expenses (category_id, expense_date, amount, description, vendor_name, payment_method, status)
+SELECT ec.id, CURRENT_DATE, 15000.00, 'Cattle feed - 10 bags', 'Pashudhan Feed Suppliers', 'bank_transfer', 'approved'
+FROM expense_categories ec WHERE ec.name = 'Feed & Fodder'
+UNION ALL
+SELECT ec.id, CURRENT_DATE - 2, 5500.00, 'Vaccination for 10 cattle', 'Dr. Veterinary Clinic', 'cash', 'approved'
+FROM expense_categories ec WHERE ec.name = 'Veterinary'
+UNION ALL
+SELECT ec.id, CURRENT_DATE - 5, 3200.00, 'Diesel for delivery vehicles', 'Indian Oil Petrol Pump', 'upi', 'approved'
+FROM expense_categories ec WHERE ec.name = 'Fuel & Transport'
+UNION ALL
+SELECT ec.id, CURRENT_DATE - 3, 8500.00, 'Electricity bill - January', 'LESCO', 'bank_transfer', 'approved'
+FROM expense_categories ec WHERE ec.name = 'Electricity'
+UNION ALL
+SELECT ec.id, CURRENT_DATE - 7, 2000.00, 'Milk cans and bottles', 'Plastic Packaging Co.', 'cash', 'approved'
+FROM expense_categories ec WHERE ec.name = 'Packaging'
+UNION ALL
+SELECT ec.id, CURRENT_DATE - 1, 4500.00, 'Milking machine repair', 'Dairy Equipment Services', 'upi', 'pending'
+FROM expense_categories ec WHERE ec.name = 'Maintenance';
+
+-- Demo Inventory Items
+INSERT INTO inventory_items (name, category, sku, unit, quantity, min_stock_level, unit_price, supplier_name, storage_location, is_active) VALUES
+  ('Cattle Feed Premium', 'feed', 'INV-FEED-001', 'bags', 50.00, 20.00, 1500.00, 'Pashudhan Feeds', 'Godown A', true),
+  ('Green Fodder', 'feed', 'INV-FEED-002', 'kg', 500.00, 200.00, 15.00, 'Local Farm', 'Open Shed', true),
+  ('Mineral Mixture', 'feed', 'INV-FEED-003', 'kg', 25.00, 10.00, 120.00, 'Nutrivet Supplies', 'Store Room', true),
+  ('Ivermectin Injection', 'medicine', 'INV-MED-001', 'pieces', 20.00, 10.00, 85.00, 'Vet Pharma', 'Medicine Cabinet', true),
+  ('Calcium Supplement', 'medicine', 'INV-MED-002', 'bottles', 15.00, 5.00, 250.00, 'Vet Pharma', 'Medicine Cabinet', true),
+  ('Antiseptic Spray', 'medicine', 'INV-MED-003', 'pieces', 10.00, 5.00, 180.00, 'Vet Pharma', 'Medicine Cabinet', true),
+  ('Milk Cans 40L', 'equipment', 'INV-EQP-001', 'pieces', 25.00, 10.00, 2500.00, 'Dairy Equipment Co.', 'Equipment Shed', true),
+  ('Milk Bottles 500ml', 'packaging', 'INV-PKG-001', 'pieces', 500.00, 200.00, 12.00, 'Glass Works', 'Packaging Store', true),
+  ('Milk Pouches 1L', 'packaging', 'INV-PKG-002', 'pieces', 1000.00, 500.00, 3.50, 'Plastic Packaging', 'Packaging Store', true),
+  ('Cleaning Solution', 'cleaning', 'INV-CLN-001', 'liters', 50.00, 20.00, 80.00, 'Clean Chemicals', 'Cleaning Store', true)
+ON CONFLICT (sku) DO NOTHING;
+
+-- Demo Equipment
+INSERT INTO equipment (name, equipment_type, serial_number, purchase_date, purchase_price, warranty_until, status, location, last_maintenance_date, next_maintenance_date, notes) VALUES
+  ('Automatic Milking Machine', 'Milking Equipment', 'AMM-2022-001', '2022-06-15', 150000.00, '2025-06-15', 'operational', 'Milking Parlor', '2024-01-10', '2024-04-10', 'DeLaval brand - 4 cluster'),
+  ('Milk Chiller 500L', 'Cooling Equipment', 'MCH-2021-002', '2021-09-20', 85000.00, '2024-09-20', 'operational', 'Processing Unit', '2024-01-05', '2024-03-05', 'Maintains 4C temperature'),
+  ('Chaff Cutter', 'Feed Equipment', 'CHF-2020-003', '2020-03-10', 35000.00, '2023-03-10', 'operational', 'Feed Storage', '2023-12-20', '2024-03-20', 'Electric operated'),
+  ('Delivery Van - Tata Ace', 'Vehicle', 'VEH-2022-001', '2022-02-28', 450000.00, '2025-02-28', 'operational', 'Vehicle Shed', '2024-01-15', '2024-02-15', 'Primary delivery vehicle'),
+  ('Cream Separator', 'Processing Equipment', 'CRS-2021-004', '2021-11-05', 45000.00, '2024-11-05', 'operational', 'Processing Unit', '2023-11-05', '2024-02-05', 'Manual operated'),
+  ('Water Pump 2HP', 'Utility Equipment', 'WPM-2019-005', '2019-07-12', 15000.00, '2022-07-12', 'operational', 'Water Tank Area', '2023-10-15', '2024-01-15', 'Submersible pump'),
+  ('Weighing Scale 100kg', 'Measuring Equipment', 'WSC-2020-006', '2020-08-22', 8000.00, '2023-08-22', 'operational', 'Collection Center', '2023-08-22', '2024-02-22', 'Digital scale'),
+  ('Generator 5KVA', 'Utility Equipment', 'GEN-2021-007', '2021-04-18', 75000.00, '2024-04-18', 'operational', 'Power Room', '2023-10-18', '2024-01-18', 'Backup power')
+ON CONFLICT (serial_number) DO NOTHING;
+
+-- Demo Suppliers
+INSERT INTO suppliers (name, contact_person, phone, email, address, gst_number, payment_terms, is_active) VALUES
+  ('Pashudhan Feed Suppliers', 'Rakesh Agarwal', '9898123001', 'pashudhan@feeds.com', 'Industrial Area, Lucknow', '09AABCP1234M1Z5', 'Net 30', true),
+  ('Vet Pharma Distributors', 'Dr. Sanjay Mishra', '9898123002', 'vetpharma@meds.com', 'Medical Market, Lucknow', '09AABCV5678N2Z6', 'Net 15', true),
+  ('Dairy Equipment Co.', 'Vinod Kumar', '9898123003', 'dairyequip@mail.com', 'UPSIDC Industrial Area', '09AABCD9012P3Z7', 'Net 45', true),
+  ('Clean Chemicals Ltd', 'Priya Singh', '9898123004', 'cleanchemicals@mail.com', 'Chemical Zone, Kanpur', '09AABCC3456Q4Z8', 'COD', true),
+  ('Glass Works Industries', '9898123005', 'Amit Gupta', 'glassworks@mail.com', 'Glass Factory Road', '09AABCG7890R5Z9', 'Net 30', true)
+ON CONFLICT DO NOTHING;
+
+-- Demo Health Records
+INSERT INTO health_records (cattle_id, record_type, record_date, diagnosis, treatment, medication, dosage, veterinarian_name, cost, next_followup_date, notes)
+SELECT c.id, 'vaccination', CURRENT_DATE - 30, 'FMD Vaccination', 'FMD Vaccine administered', 'FMD Vaccine', '5ml', 'Dr. Rajesh Sharma', 150.00, CURRENT_DATE + 150, 'Routine vaccination'
+FROM cattle c WHERE c.tag_number = 'COW-001'
+UNION ALL
+SELECT c.id, 'checkup', CURRENT_DATE - 15, 'Routine health checkup', 'General examination - healthy', 'Vitamin supplement', '10ml daily', 'Dr. Rajesh Sharma', 500.00, CURRENT_DATE + 75, 'All vitals normal'
+FROM cattle c WHERE c.tag_number = 'COW-002'
+UNION ALL
+SELECT c.id, 'treatment', CURRENT_DATE - 7, 'Mild mastitis', 'Antibiotic treatment', 'Ceftriaxone', '2.5g twice daily', 'Dr. Sanjay Verma', 1200.00, CURRENT_DATE + 7, 'Responding well to treatment'
+FROM cattle c WHERE c.tag_number = 'COW-003'
+UNION ALL
+SELECT c.id, 'deworming', CURRENT_DATE - 45, 'Routine deworming', 'Oral deworming medication', 'Albendazole', '10ml', 'Dr. Rajesh Sharma', 100.00, CURRENT_DATE + 45, 'Quarterly deworming'
+FROM cattle c WHERE c.tag_number = 'COW-004';
+
+-- Demo Breeding Records
+INSERT INTO breeding_records (cattle_id, breeding_type, breeding_date, semen_straw_id, technician_name, expected_calving_date, pregnancy_status, notes)
+SELECT c.id, 'artificial_insemination', CURRENT_DATE - 120, 'GIR-ELITE-2024-001', 'AI Technician Ram Singh', CURRENT_DATE + 160, 'confirmed', 'Confirmed pregnant at 60 days'
+FROM cattle c WHERE c.tag_number = 'COW-005'
+UNION ALL
+SELECT c.id, 'artificial_insemination', CURRENT_DATE - 30, 'SAH-PREM-2024-002', 'AI Technician Ram Singh', CURRENT_DATE + 250, 'pending', 'Awaiting pregnancy confirmation'
+FROM cattle c WHERE c.tag_number = 'COW-006';
+
 COMMIT;
