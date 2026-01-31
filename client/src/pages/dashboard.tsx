@@ -271,14 +271,21 @@ export default function DashboardPage() {
     return customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0);
   }, [customers]);
 
-  // Calculate top customers by revenue (from invoices)
+  // Calculate top customers by revenue (from valid invoices only)
   const topCustomers = useMemo(() => {
     const customerRevenue: Record<string, { name: string; revenue: number; invoiceCount: number }> = {};
     
-    invoices.forEach(inv => {
+    // Only count non-cancelled invoices with valid amounts
+    const validInvoices = invoices.filter(inv => 
+      inv.status !== 'cancelled' && 
+      inv.total_amount && 
+      inv.total_amount > 0
+    );
+    
+    validInvoices.forEach(inv => {
       const customer = customers.find(c => c.id === inv.customer_id);
       const customerName = customer?.name || 'Unknown';
-      const customerId = inv.customer_id || 'unknown';
+      const customerId = String(inv.customer_id || 'unknown');
       
       if (!customerRevenue[customerId]) {
         customerRevenue[customerId] = { name: customerName, revenue: 0, invoiceCount: 0 };
@@ -297,7 +304,7 @@ export default function DashboardPage() {
       }));
   }, [invoices, customers]);
 
-  // Calculate monthly revenue trend (last 6 months)
+  // Calculate monthly revenue trend (last 6 months) - only valid invoices
   const monthlyRevenueData = useMemo(() => {
     const months: { month: string; billed: number; collected: number }[] = [];
     
@@ -309,7 +316,14 @@ export default function DashboardPage() {
       const monthName = format(date, 'MMM');
       
       const monthInvoices = invoices.filter(inv => {
+        // Skip cancelled invoices
+        if (inv.status === 'cancelled') return false;
+        
+        // Defensive date parsing
+        if (!inv.invoice_date) return false;
         const invDate = new Date(inv.invoice_date);
+        if (isNaN(invDate.getTime())) return false;
+        
         return invDate >= monthStart && invDate <= monthEnd;
       });
       
@@ -323,10 +337,11 @@ export default function DashboardPage() {
     return months;
   }, [invoices]);
 
-  // Financial summary
+  // Financial summary - only valid invoices
   const financialSummary = useMemo(() => {
-    const totalBilled = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
-    const totalCollected = invoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0);
+    const validInvoices = invoices.filter(inv => inv.status !== 'cancelled');
+    const totalBilled = validInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    const totalCollected = validInvoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0);
     const collectionRate = totalBilled > 0 ? (totalCollected / totalBilled) * 100 : 0;
     
     return {
@@ -645,14 +660,14 @@ export default function DashboardPage() {
                   <CardDescription className="text-xs md:text-sm hidden sm:block">Billed vs Collected (Last 6 months)</CardDescription>
                 </div>
                 <div className="flex items-center gap-2 shrink-0">
-                  <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 text-xs">
+                  <Badge data-testid="badge-collection-rate" className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 text-xs">
                     {financialSummary.collectionRate}% collected
                   </Badge>
                 </div>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="h-[200px] md:h-[280px]">
+              <div data-testid="chart-revenue-overview" className="h-[200px] md:h-[280px]">
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={monthlyRevenueData}>
                     <defs>
@@ -702,13 +717,13 @@ export default function DashboardPage() {
                   </CardTitle>
                   <CardDescription className="text-xs md:text-sm hidden sm:block">Where your money goes</CardDescription>
                 </div>
-                <Badge className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
+                <Badge data-testid="badge-total-expenses" className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
                   ₹{totalExpenses >= 1000 ? `${(totalExpenses/1000).toFixed(0)}K` : totalExpenses} total
                 </Badge>
               </div>
             </CardHeader>
             <CardContent className="p-4 pt-0">
-              <div className="h-[200px] md:h-[280px] flex items-center">
+              <div data-testid="chart-expense-breakdown" className="h-[200px] md:h-[280px] flex items-center">
                 <div className="w-2/5 md:w-1/2">
                   <ResponsiveContainer width="100%" height={180}>
                     <PieChart>
@@ -773,7 +788,7 @@ export default function DashboardPage() {
                 <CardDescription className="text-xs md:text-sm hidden sm:block">Highest revenue contributors</CardDescription>
               </div>
               <Link href="/customers">
-                <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3">
+                <Button data-testid="button-view-all-customers" variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3">
                   <span className="hidden sm:inline">View All</span>
                   <ArrowRight className="h-4 w-4 sm:ml-1" />
                 </Button>
@@ -781,7 +796,7 @@ export default function DashboardPage() {
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-0">
-            <div className="h-[200px] md:h-[250px]">
+            <div data-testid="chart-top-customers" className="h-[200px] md:h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <BarChart data={topCustomers} layout="vertical">
                   <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
