@@ -1,11 +1,10 @@
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
-import { supabase } from '@/lib/supabase';
+import { api } from '@/lib/supabase';
 import {
   fetchCattle, fetchProduction, fetchCustomers, fetchProducts,
   fetchRoutes, fetchDeliveries, fetchInvoices, fetchExpenses,
   fetchEmployees, fetchInventory, fetchEquipment, fetchHealthRecords,
-  fetchBreedingRecords, fetchVendors, fetchVendorPayments, fetchProcurement, getDashboardStats,
-  DEMO_CATTLE, DEMO_CUSTOMERS, DEMO_PRODUCTS, DEMO_ROUTES, DEMO_VENDORS, demoStore, isDemo
+  fetchBreedingRecords, fetchVendors, fetchVendorPayments, fetchProcurement, getDashboardStats
 } from '@/lib/api';
 import type { Cattle, Customer, Product, MilkProduction, Delivery, Invoice, HealthRecord, BreedingRecord, MilkVendor, VendorPayment, MilkProcurement } from '@shared/types';
 
@@ -121,42 +120,7 @@ export function useBreedingRecords() {
 export function useDashboardStats() {
   return useQuery({
     queryKey: ['dashboard-stats'],
-    queryFn: async () => {
-      if (isDemo()) {
-        return getDashboardStats();
-      }
-      const [cattle, production, customers, deliveries, invoices, inventory, expenses] = await Promise.all([
-        fetchCattle(),
-        fetchProduction(),
-        fetchCustomers(),
-        fetchDeliveries(),
-        fetchInvoices(),
-        fetchInventory(),
-        fetchExpenses(),
-      ]);
-
-      const today = new Date().toISOString().split('T')[0];
-      const todayProduction = production.filter(p => p.production_date === today);
-      const totalMilk = todayProduction.reduce((sum, p) => sum + (p.quantity_liters || 0), 0);
-      const activeCattle = cattle.filter(c => c.status === 'active' && c.lactation_status === 'lactating').length;
-      
-      return {
-        todayProduction: totalMilk,
-        activeCattle,
-        milkingCattle: activeCattle,
-        totalCattle: cattle.length,
-        activeCustomers: customers.filter(c => c.is_active).length,
-        pendingDeliveries: deliveries.filter(d => d.status === 'pending').length,
-        completedDeliveries: deliveries.filter(d => d.status === 'delivered').length,
-        monthlyRevenue: invoices.reduce((sum, i) => sum + (i.paid_amount || 0), 0),
-        outstandingAmount: customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0),
-        lowStockItems: inventory.filter(i => i.quantity <= i.min_stock_level).length,
-        pendingExpenses: expenses.length,
-        avgFatContent: todayProduction.length > 0 
-          ? todayProduction.reduce((sum, p) => sum + (p.fat_percentage || 0), 0) / todayProduction.length 
-          : 0,
-      };
-    },
+    queryFn: getDashboardStats,
     staleTime: 2 * 60 * 1000,
   });
 }
@@ -166,20 +130,10 @@ export function useAddCattle() {
   
   return useMutation({
     mutationFn: async (cattle: Partial<Cattle>) => {
-      if (isDemo()) {
-        const newCattle = { id: `demo-${Date.now()}`, created_at: new Date().toISOString(), ...cattle } as Cattle;
-        return newCattle;
-      }
-      const { data, error } = await supabase.from('cattle').insert(cattle).select().single();
-      if (error) throw error;
-      return data;
+      return api.cattle.create(cattle);
     },
-    onSuccess: (data) => {
-      if (isDemo() && data) {
-        queryClient.setQueryData(['cattle'], (old: Cattle[] | undefined) => [...(old || []), data]);
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['cattle'] });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cattle'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -190,19 +144,10 @@ export function useUpdateCattle() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Cattle> & { id: string }) => {
-      if (isDemo()) return { id, ...updates } as Cattle;
-      const { data, error } = await supabase.from('cattle').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return api.cattle.update(id, updates);
     },
-    onSuccess: (data) => {
-      if (isDemo() && data) {
-        queryClient.setQueryData(['cattle'], (old: Cattle[] | undefined) => 
-          (old || []).map(c => c.id === data.id ? { ...c, ...data } : c)
-        );
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['cattle'] });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cattle'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -213,19 +158,10 @@ export function useDeleteCattle() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      if (isDemo()) return { id, success: true };
-      const { error } = await supabase.from('cattle').delete().eq('id', id);
-      if (error) throw error;
-      return { id, success: true };
+      return api.cattle.delete(id);
     },
-    onSuccess: (data) => {
-      if (isDemo() && data?.id) {
-        queryClient.setQueryData(['cattle'], (old: Cattle[] | undefined) => 
-          (old || []).filter(c => c.id !== data.id)
-        );
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['cattle'] });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['cattle'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -236,10 +172,7 @@ export function useAddProduction() {
   
   return useMutation({
     mutationFn: async (production: Partial<MilkProduction>) => {
-      if (isDemo()) return { id: `demo-${Date.now()}`, ...production };
-      const { data, error } = await supabase.from('milk_production').insert(production).select().single();
-      if (error) throw error;
-      return data;
+      return api.production.create(production);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['production'] });
@@ -253,14 +186,7 @@ export function useAddCustomer() {
   
   return useMutation({
     mutationFn: async (customer: Partial<Customer>) => {
-      if (isDemo()) {
-        const newCustomer = { id: `demo-${Date.now()}`, created_at: new Date().toISOString(), ...customer } as Customer;
-        demoStore.addCustomer(newCustomer);
-        return newCustomer;
-      }
-      const { data, error } = await supabase.from('customers').insert(customer).select().single();
-      if (error) throw error;
-      return data;
+      return api.customers.create(customer);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -274,13 +200,7 @@ export function useUpdateCustomer() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Customer> & { id: string }) => {
-      if (isDemo()) {
-        demoStore.updateCustomer(id, updates);
-        return { id, ...updates } as Customer;
-      }
-      const { data, error } = await supabase.from('customers').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return api.customers.update(id, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['customers'] });
@@ -294,19 +214,10 @@ export function useDeleteCustomer() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      if (isDemo()) return { id, success: true };
-      const { error } = await supabase.from('customers').delete().eq('id', id);
-      if (error) throw error;
-      return { id, success: true };
+      return api.customers.delete(id);
     },
-    onSuccess: (data) => {
-      if (isDemo() && data?.id) {
-        queryClient.setQueryData(['customers'], (old: Customer[] | undefined) => 
-          (old || []).filter(c => c.id !== data.id)
-        );
-      } else {
-        queryClient.invalidateQueries({ queryKey: ['customers'] });
-      }
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['customers'] });
       queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
     },
   });
@@ -317,10 +228,7 @@ export function useAddDelivery() {
   
   return useMutation({
     mutationFn: async (delivery: Partial<Delivery>) => {
-      if (isDemo()) return { id: `demo-${Date.now()}`, ...delivery };
-      const { data, error } = await supabase.from('deliveries').insert(delivery).select().single();
-      if (error) throw error;
-      return data;
+      return api.deliveries.create(delivery);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deliveries'] });
@@ -334,10 +242,7 @@ export function useUpdateDelivery() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Delivery> & { id: string }) => {
-      if (isDemo()) return { id, ...updates };
-      const { data, error } = await supabase.from('deliveries').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return api.deliveries.update(id, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['deliveries'] });
@@ -351,21 +256,7 @@ export function useAddInvoice() {
   
   return useMutation({
     mutationFn: async (invoice: Partial<Invoice>) => {
-      if (isDemo()) {
-        const newInvoice = { 
-          id: `demo-${Date.now()}`, 
-          invoice_number: invoice.invoice_number || `AWD-${new Date().getFullYear()}-${String(Date.now()).slice(-3)}`,
-          payment_status: 'pending' as const,
-          paid_amount: 0,
-          created_at: new Date().toISOString(),
-          ...invoice 
-        } as Invoice;
-        demoStore.addInvoice(newInvoice);
-        return newInvoice;
-      }
-      const { data, error } = await supabase.from('invoices').insert(invoice).select().single();
-      if (error) throw error;
-      return data;
+      return api.invoices.create(invoice);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -379,13 +270,7 @@ export function useUpdateInvoice() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<Invoice>) => {
-      if (isDemo()) {
-        demoStore.updateInvoice(id, updates);
-        return { id, ...updates };
-      }
-      const { data, error } = await supabase.from('invoices').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return api.invoices.update(id, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['invoices'] });
@@ -400,10 +285,7 @@ export function useAddHealthRecord() {
   
   return useMutation({
     mutationFn: async (record: Partial<HealthRecord>) => {
-      if (isDemo()) return { id: `demo-${Date.now()}`, ...record };
-      const { data, error } = await supabase.from('health_records').insert(record).select().single();
-      if (error) throw error;
-      return data;
+      return api.health.create(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['health'] });
@@ -416,10 +298,7 @@ export function useAddBreedingRecord() {
   
   return useMutation({
     mutationFn: async (record: Partial<BreedingRecord>) => {
-      if (isDemo()) return { id: `demo-${Date.now()}`, ...record };
-      const { data, error } = await supabase.from('breeding_records').insert(record).select().single();
-      if (error) throw error;
-      return data;
+      return api.breeding.create(record);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['breeding'] });
@@ -432,18 +311,7 @@ export function useAddExpense() {
   
   return useMutation({
     mutationFn: async (expense: { category: string; title: string; amount: number; expense_date: string; notes?: string }) => {
-      if (isDemo()) {
-        const newExpense = { 
-          id: `demo-${Date.now()}`, 
-          ...expense, 
-          created_at: new Date().toISOString() 
-        };
-        demoStore.addExpense(newExpense as any);
-        return newExpense;
-      }
-      const { data, error } = await supabase.from('expenses').insert(expense).select().single();
-      if (error) throw error;
-      return data;
+      return api.expenses.create(expense);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['expenses'] });
@@ -454,15 +322,14 @@ export function useAddExpense() {
 
 export function getLookups() {
   return {
-    cattle: isDemo() ? DEMO_CATTLE : [],
-    customers: isDemo() ? DEMO_CUSTOMERS : [],
-    products: isDemo() ? DEMO_PRODUCTS : [],
-    routes: isDemo() ? DEMO_ROUTES : [],
-    vendors: isDemo() ? DEMO_VENDORS : [],
+    cattle: [],
+    customers: [],
+    products: [],
+    routes: [],
+    vendors: [],
   };
 }
 
-// Vendor hooks
 export function useVendors() {
   return useQuery({
     queryKey: ['vendors'],
@@ -476,21 +343,7 @@ export function useAddVendor() {
   
   return useMutation({
     mutationFn: async (vendor: Omit<MilkVendor, 'id' | 'created_at'>) => {
-      if (isDemo()) {
-        const newVendor: MilkVendor = {
-          id: `demo-${Date.now()}`,
-          ...vendor,
-          current_balance: 0,
-          total_procurement: 0,
-          total_paid: 0,
-          created_at: new Date().toISOString(),
-        };
-        demoStore.addVendor(newVendor);
-        return newVendor;
-      }
-      const { data, error } = await supabase.from('milk_vendors').insert(vendor).select().single();
-      if (error) throw error;
-      return data;
+      return api.vendors.create(vendor);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
@@ -503,13 +356,7 @@ export function useUpdateVendor() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<MilkVendor> & { id: string }) => {
-      if (isDemo()) {
-        demoStore.updateVendor(id, updates);
-        return { id, ...updates };
-      }
-      const { data, error } = await supabase.from('milk_vendors').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return api.vendors.update(id, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
@@ -522,13 +369,7 @@ export function useDeleteVendor() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      if (isDemo()) {
-        demoStore.deleteVendor(id);
-        return { id };
-      }
-      const { error } = await supabase.from('milk_vendors').delete().eq('id', id);
-      if (error) throw error;
-      return { id };
+      return api.vendors.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
@@ -536,7 +377,6 @@ export function useDeleteVendor() {
   });
 }
 
-// Vendor Payment hooks
 export function useVendorPayments() {
   return useQuery({
     queryKey: ['vendor-payments'],
@@ -550,18 +390,7 @@ export function useAddVendorPayment() {
   
   return useMutation({
     mutationFn: async (payment: Omit<VendorPayment, 'id' | 'created_at'>) => {
-      if (isDemo()) {
-        const newPayment: VendorPayment = {
-          id: `demo-${Date.now()}`,
-          ...payment,
-          created_at: new Date().toISOString(),
-        };
-        demoStore.addVendorPayment(newPayment);
-        return newPayment;
-      }
-      const { data, error } = await supabase.from('vendor_payments').insert(payment).select().single();
-      if (error) throw error;
-      return data;
+      return api.vendorPayments.create(payment);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendor-payments'] });
@@ -576,21 +405,7 @@ export function useAddBulkVendorPayments() {
   
   return useMutation({
     mutationFn: async (payments: Array<Omit<VendorPayment, 'id' | 'created_at'>>) => {
-      if (isDemo()) {
-        const newPayments = payments.map((payment, index) => {
-          const newPayment: VendorPayment = {
-            id: `demo-${Date.now()}-${index}`,
-            ...payment,
-            created_at: new Date().toISOString(),
-          };
-          demoStore.addVendorPayment(newPayment);
-          return newPayment;
-        });
-        return newPayments;
-      }
-      const { data, error } = await supabase.from('vendor_payments').insert(payments).select();
-      if (error) throw error;
-      return data;
+      return api.vendorPayments.createBulk(payments);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['vendor-payments'] });
@@ -600,7 +415,6 @@ export function useAddBulkVendorPayments() {
   });
 }
 
-// Procurement hooks
 export function useProcurement() {
   return useQuery({
     queryKey: ['procurement'],
@@ -614,18 +428,7 @@ export function useAddProcurement() {
   
   return useMutation({
     mutationFn: async (item: Omit<MilkProcurement, 'id' | 'created_at'>) => {
-      if (isDemo()) {
-        const newItem: MilkProcurement = {
-          id: `demo-${Date.now()}`,
-          ...item,
-          created_at: new Date().toISOString(),
-        };
-        demoStore.addProcurement(newItem);
-        return newItem;
-      }
-      const { data, error } = await supabase.from('milk_procurement').insert(item).select().single();
-      if (error) throw error;
-      return data;
+      return api.procurement.create(item);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procurement'] });
@@ -639,13 +442,7 @@ export function useUpdateProcurement() {
   
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<MilkProcurement> & { id: string }) => {
-      if (isDemo()) {
-        demoStore.updateProcurement(id, updates);
-        return { id, ...updates };
-      }
-      const { data, error } = await supabase.from('milk_procurement').update(updates).eq('id', id).select().single();
-      if (error) throw error;
-      return data;
+      return api.procurement.update(id, updates);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procurement'] });
@@ -659,13 +456,7 @@ export function useDeleteProcurement() {
   
   return useMutation({
     mutationFn: async (id: string) => {
-      if (isDemo()) {
-        demoStore.deleteProcurement(id);
-        return { id };
-      }
-      const { error } = await supabase.from('milk_procurement').delete().eq('id', id);
-      if (error) throw error;
-      return { id };
+      return api.procurement.delete(id);
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procurement'] });

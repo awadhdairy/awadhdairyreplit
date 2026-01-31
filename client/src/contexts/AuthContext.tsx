@@ -1,57 +1,6 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { supabase, getStoredSession, storeSession, clearSession, getStoredUser } from '@/lib/supabase';
+import { api, getStoredSession, storeSession, clearSession, getStoredUser } from '@/lib/supabase';
 import type { Profile, LoginResponse } from '@shared/types';
-
-const DEMO_USERS: Record<string, { pin: string; user: Profile }> = {
-  "7897716792": {
-    pin: "101101",
-    user: {
-      id: "admin-awadh-dairy",
-      full_name: "Awadh Dairy Admin",
-      phone: "7897716792",
-      role: "super_admin",
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  },
-  "9876543210": {
-    pin: "123456",
-    user: {
-      id: "demo-admin-1",
-      full_name: "Admin User",
-      phone: "9876543210",
-      role: "super_admin",
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  },
-  "9876543211": {
-    pin: "123456",
-    user: {
-      id: "demo-manager-1",
-      full_name: "Priya Sharma",
-      phone: "9876543211",
-      role: "manager",
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  },
-  "9876543212": {
-    pin: "123456",
-    user: {
-      id: "demo-delivery-1",
-      full_name: "Ramesh Kumar",
-      phone: "9876543212",
-      role: "delivery_staff",
-      is_active: true,
-      created_at: new Date().toISOString(),
-      updated_at: new Date().toISOString()
-    }
-  }
-};
 
 interface AuthContextType {
   user: Profile | null;
@@ -79,25 +28,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    if (token.startsWith('demo-')) {
-      setSessionToken(token);
-      setUser(storedUser);
-      setIsLoading(false);
-      return;
-    }
-
     try {
-      const { data, error } = await supabase.rpc('validate_session', {
-        _session_token: token
-      });
-
-      if (error || !data?.success) {
+      const result = await api.auth.validate(token);
+      if (!result.success) {
         clearSession();
         setUser(null);
         setSessionToken(null);
       } else {
         setSessionToken(token);
-        setUser(storedUser || data.user);
+        setUser(storedUser || result.user);
       }
     } catch (err) {
       if (storedUser) {
@@ -118,50 +57,31 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, [refreshSession]);
 
   const login = async (phone: string, pin: string): Promise<LoginResponse> => {
-    const demoUser = DEMO_USERS[phone];
-    if (demoUser && demoUser.pin === pin) {
-      const demoToken = `demo-${Date.now()}`;
-      storeSession(demoToken, demoUser.user);
-      setSessionToken(demoToken);
-      setUser(demoUser.user);
-      return { success: true, session_token: demoToken, user: demoUser.user };
-    }
-
     try {
-      const { data, error } = await supabase.rpc('staff_login', {
-        _phone: phone,
-        _pin: pin
-      });
+      const result = await api.auth.login(phone, pin);
 
-      if (error) {
-        if (error.message.includes('Could not find the function') || error.code === 'PGRST202') {
-          return { success: false, message: 'Backend not configured. Use demo credentials: Phone 9876543210, PIN 123456' };
-        }
-        return { success: false, message: error.message };
+      if (!result.success) {
+        return { success: false, message: result.message || 'Login failed' };
       }
 
-      if (!data?.success) {
-        return { success: false, message: data?.message || 'Login failed' };
-      }
-
-      storeSession(data.session_token, data.user);
-      setSessionToken(data.session_token);
-      setUser(data.user);
+      storeSession(result.session_token, result.user);
+      setSessionToken(result.session_token);
+      setUser(result.user);
 
       return {
         success: true,
-        session_token: data.session_token,
-        user: data.user
+        session_token: result.session_token,
+        user: result.user
       };
     } catch (err: any) {
-      return { success: false, message: 'Backend unavailable. Use demo: Phone 9876543210, PIN 123456' };
+      return { success: false, message: err.message || 'Login failed' };
     }
   };
 
   const logout = async () => {
     try {
       if (sessionToken) {
-        await supabase.rpc('logout_session', { _session_token: sessionToken });
+        await api.auth.logout(sessionToken);
       }
     } catch (err) {
       console.error('Logout error:', err);
