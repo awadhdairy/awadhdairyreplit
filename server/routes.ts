@@ -111,7 +111,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/cattle/:id", authMiddleware, async (req, res) => {
+  app.put("/api/cattle/:id", authMiddleware, validateBody(insertCattleSchema.partial()), async (req, res) => {
     try {
       const cattle = await storage.updateCattle(req.params.id, req.body);
       res.json(cattle);
@@ -165,7 +165,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/customers/:id", authMiddleware, async (req, res) => {
+  app.put("/api/customers/:id", authMiddleware, validateBody(insertCustomerSchema.partial()), async (req, res) => {
     try {
       const customer = await storage.updateCustomer(req.params.id, req.body);
       res.json(customer);
@@ -237,7 +237,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/deliveries/:id", authMiddleware, async (req, res) => {
+  app.put("/api/deliveries/:id", authMiddleware, validateBody(insertDeliverySchema.partial()), async (req, res) => {
     try {
       const delivery = await storage.updateDelivery(req.params.id, req.body);
       res.json(delivery);
@@ -264,7 +264,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/invoices/:id", authMiddleware, async (req, res) => {
+  app.put("/api/invoices/:id", authMiddleware, validateBody(insertInvoiceSchema.partial()), async (req, res) => {
     try {
       const invoice = await storage.updateInvoice(req.params.id, req.body);
       res.json(invoice);
@@ -309,7 +309,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/expenses/:id", authMiddleware, async (req, res) => {
+  app.put("/api/expenses/:id", authMiddleware, validateBody(insertExpenseSchema.partial()), async (req, res) => {
     try {
       const expense = await storage.updateExpense(req.params.id, req.body);
       res.json(expense);
@@ -417,7 +417,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/vendors/:id", authMiddleware, async (req, res) => {
+  app.put("/api/vendors/:id", authMiddleware, validateBody(insertMilkVendorSchema.partial()), async (req, res) => {
     try {
       const vendor = await storage.updateVendor(req.params.id, req.body);
       res.json(vendor);
@@ -453,7 +453,7 @@ export async function registerRoutes(
     }
   });
 
-  app.post("/api/vendor-payments/bulk", authMiddleware, async (req, res) => {
+  app.post("/api/vendor-payments/bulk", authMiddleware, validateBody(z.array(insertVendorPaymentSchema.partial())), async (req, res) => {
     try {
       const payments = await storage.createBulkVendorPayments(req.body);
       res.json(payments);
@@ -480,7 +480,7 @@ export async function registerRoutes(
     }
   });
 
-  app.put("/api/procurement/:id", authMiddleware, async (req, res) => {
+  app.put("/api/procurement/:id", authMiddleware, validateBody(insertMilkProcurementSchema.partial()), async (req, res) => {
     try {
       const item = await storage.updateProcurement(req.params.id, req.body);
       res.json(item);
