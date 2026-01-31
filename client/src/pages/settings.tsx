@@ -20,10 +20,10 @@ export default function SettingsPage() {
 
   const [dairySettings, setDairySettings] = useState({
     dairy_name: "AWADH DAIRY",
-    address: "Village Rampur, District Lucknow, UP",
-    phone: "9876543210",
-    email: "info@awadhdairy.com",
-    invoice_prefix: "INV",
+    address: "Barabanki, U.P. India",
+    phone: "9451574464",
+    email: "contact@awadhdairy.com",
+    invoice_prefix: "AWD",
     upi_handle: "awadhdairy@upi",
   });
 
