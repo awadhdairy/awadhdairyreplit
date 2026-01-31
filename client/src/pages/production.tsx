@@ -248,43 +248,55 @@ export default function ProductionPage() {
         </Tabs>
       </div>
 
-      {/* Stats Cards - 2x2 on mobile */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
-      >
-        <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-3 md:p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">Today's Total</p>
-            <p className="text-xl md:text-2xl font-bold text-primary">{totalToday.toFixed(1)} L</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center gap-1">
-              <Sun className="h-3 w-3 md:h-4 md:w-4 text-amber-500" />
-              <p className="text-xs md:text-sm text-muted-foreground">Morning</p>
-            </div>
-            <p className="text-xl md:text-2xl font-bold text-amber-600">{morningTotal.toFixed(1)} L</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-3 md:p-4">
-            <div className="flex items-center gap-1">
-              <Moon className="h-3 w-3 md:h-4 md:w-4 text-indigo-500" />
-              <p className="text-xs md:text-sm text-muted-foreground">Evening</p>
-            </div>
-            <p className="text-xl md:text-2xl font-bold text-indigo-600">{eveningTotal.toFixed(1)} L</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-3 md:p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">Avg Fat %</p>
-            <p className="text-xl md:text-2xl font-bold text-green-600">{avgFat.toFixed(1)}%</p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {/* Stats Cards - Modern gradient cards */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4">
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.05 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-green rounded-xl p-3 md:p-4 cursor-pointer modern-card"
+        >
+          <p className="text-xs md:text-sm text-muted-foreground">Today's Total</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">{totalToday.toFixed(1)} L</p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-amber rounded-xl p-3 md:p-4 cursor-pointer modern-card"
+        >
+          <div className="flex items-center gap-1">
+            <Sun className="h-3 w-3 md:h-4 md:w-4 text-amber-500" />
+            <p className="text-xs md:text-sm text-muted-foreground">Morning</p>
+          </div>
+          <p className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400">{morningTotal.toFixed(1)} L</p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.15 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-purple rounded-xl p-3 md:p-4 cursor-pointer modern-card"
+        >
+          <div className="flex items-center gap-1">
+            <Moon className="h-3 w-3 md:h-4 md:w-4 text-purple-500" />
+            <p className="text-xs md:text-sm text-muted-foreground">Evening</p>
+          </div>
+          <p className="text-xl md:text-2xl font-bold text-purple-600 dark:text-purple-400">{eveningTotal.toFixed(1)} L</p>
+        </motion.div>
+        <motion.div
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-blue rounded-xl p-3 md:p-4 cursor-pointer modern-card"
+        >
+          <p className="text-xs md:text-sm text-muted-foreground">Avg Fat %</p>
+          <p className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">{avgFat.toFixed(1)}%</p>
+        </motion.div>
+      </div>
 
       {/* Production Chart */}
       <motion.div

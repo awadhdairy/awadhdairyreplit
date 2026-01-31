@@ -13,13 +13,14 @@ interface NavItem {
   title: string;
   url: string;
   icon: React.ComponentType<{ className?: string }>;
+  color: string;
 }
 
 const navItems: NavItem[] = [
-  { title: "Home", url: "/dashboard", icon: LayoutDashboard },
-  { title: "Cattle", url: "/cattle", icon: Milk },
-  { title: "Production", url: "/production", icon: Package },
-  { title: "Billing", url: "/billing", icon: Receipt },
+  { title: "Home", url: "/dashboard", icon: LayoutDashboard, color: "from-green-500 to-emerald-600" },
+  { title: "Cattle", url: "/cattle", icon: Milk, color: "from-blue-500 to-cyan-600" },
+  { title: "Production", url: "/production", icon: Package, color: "from-purple-500 to-violet-600" },
+  { title: "Billing", url: "/billing", icon: Receipt, color: "from-amber-500 to-orange-600" },
 ];
 
 interface BottomNavigationProps {
@@ -31,7 +32,7 @@ export function BottomNavigation({ onMoreClick }: BottomNavigationProps) {
 
   return (
     <nav 
-      className="fixed bottom-0 left-0 right-0 z-50 md:hidden bg-background/95 backdrop-blur-lg border-t border-border safe-area-bottom"
+      className="fixed bottom-0 left-0 right-0 z-50 md:hidden glass-strong border-t border-border/50 safe-area-bottom"
       data-testid="bottom-navigation"
     >
       <div className="flex items-center justify-around h-16 px-2">
@@ -49,27 +50,33 @@ export function BottomNavigation({ onMoreClick }: BottomNavigationProps) {
                     ? "text-primary" 
                     : "text-muted-foreground"
                 )}
-                whileTap={{ scale: 0.95 }}
+                whileTap={{ scale: 0.92 }}
                 data-testid={`nav-${item.title.toLowerCase()}`}
               >
-                <div className={cn(
-                  "relative p-1.5 rounded-xl transition-all",
-                  isActive && "bg-primary/10"
-                )}>
+                <motion.div 
+                  className={cn(
+                    "relative p-2 rounded-xl transition-all",
+                    isActive && `bg-gradient-to-br ${item.color} shadow-lg`
+                  )}
+                  animate={isActive ? { 
+                    scale: [1, 1.05, 1],
+                  } : {}}
+                  transition={{ duration: 0.3 }}
+                >
                   <Icon className={cn(
                     "h-5 w-5 transition-all",
-                    isActive && "text-primary"
+                    isActive ? "text-white" : "text-muted-foreground"
                   )} />
                   {isActive && (
                     <motion.div
-                      layoutId="activeIndicator"
-                      className="absolute -bottom-1 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary"
-                      transition={{ type: "spring", stiffness: 500, damping: 30 }}
+                      initial={{ scale: 0, opacity: 0 }}
+                      animate={{ scale: 1, opacity: 1 }}
+                      className="absolute inset-0 rounded-xl bg-white/20 animate-pulse"
                     />
                   )}
-                </div>
+                </motion.div>
                 <span className={cn(
-                  "text-[10px] font-medium transition-all",
+                  "text-[10px] font-semibold transition-all",
                   isActive ? "text-primary" : "text-muted-foreground"
                 )}>
                   {item.title}
@@ -81,14 +88,14 @@ export function BottomNavigation({ onMoreClick }: BottomNavigationProps) {
 
         <motion.button
           className="flex flex-col items-center justify-center gap-0.5 px-3 py-2 rounded-xl min-w-[60px] text-muted-foreground"
-          whileTap={{ scale: 0.95 }}
+          whileTap={{ scale: 0.92 }}
           onClick={onMoreClick}
           data-testid="nav-more"
         >
-          <div className="p-1.5 rounded-xl">
+          <div className="p-2 rounded-xl">
             <MoreHorizontal className="h-5 w-5" />
           </div>
-          <span className="text-[10px] font-medium">More</span>
+          <span className="text-[10px] font-semibold">More</span>
         </motion.button>
       </div>
     </nav>

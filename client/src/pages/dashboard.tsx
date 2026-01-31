@@ -16,6 +16,7 @@ import {
   ArrowRight,
   CircleDot,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -44,6 +45,9 @@ import {
 } from "recharts";
 import { Link } from "wouter";
 import type { ExpenseCategory } from "@shared/types";
+import { GradientCard } from "@/components/ui/gradient-card";
+import { AnimatedNumber } from "@/components/ui/animated-counter";
+import { GlowButton } from "@/components/ui/glow-button";
 
 const containerVariants = {
   hidden: { opacity: 0 },
@@ -278,31 +282,61 @@ export default function DashboardPage() {
   };
 
   return (
-    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
-      {/* Welcome Section - Mobile optimized */}
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6 particle-bg">
+      {/* Welcome Section - Animated gradient header */}
       <motion.div
         initial={{ opacity: 0, y: -20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: 0.5 }}
-        className="flex flex-col gap-3"
+        className="relative overflow-hidden rounded-2xl p-4 md:p-6 gradient-animated text-white"
       >
-        <div>
-          <h1 className="text-xl md:text-3xl font-bold tracking-tight">
-            Welcome, {user?.full_name?.split(" ")[0] || "User"}!
-          </h1>
-          <p className="text-sm md:text-base text-muted-foreground">
-            Here's what's happening today
-          </p>
+        <div className="relative z-10 flex flex-col gap-3">
+          <div className="flex items-start justify-between gap-4">
+            <div>
+              <motion.h1 
+                className="text-xl md:text-3xl font-bold tracking-tight flex items-center gap-2"
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: 0.2 }}
+              >
+                <Sparkles className="h-5 w-5 md:h-7 md:w-7 text-yellow-300" />
+                Welcome, {user?.full_name?.split(" ")[0] || "User"}!
+              </motion.h1>
+              <motion.p 
+                className="text-sm md:text-base text-white/80"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                transition={{ delay: 0.3 }}
+              >
+                Here's what's happening at your dairy farm today
+              </motion.p>
+            </div>
+            <motion.div 
+              className="hidden md:flex flex-col items-end gap-1"
+              initial={{ opacity: 0, scale: 0.9 }}
+              animate={{ opacity: 1, scale: 1 }}
+              transition={{ delay: 0.4 }}
+            >
+              <Badge className="bg-white/20 text-white border-white/30 hover:bg-white/30">
+                {user?.role ? roleLabels[user.role] : "Staff"}
+              </Badge>
+              <span className="text-xs text-white/70 flex items-center gap-1">
+                <Calendar className="h-3 w-3" />
+                {format(new Date(), "EEEE, dd MMM yyyy")}
+              </span>
+            </motion.div>
+          </div>
+          <div className="flex items-center gap-2 flex-wrap md:hidden">
+            <Badge className="bg-white/20 text-white border-white/30 px-2 py-0.5 text-xs">
+              {user?.role ? roleLabels[user.role] : "Staff"}
+            </Badge>
+            <Badge className="bg-white/10 text-white/90 border-white/20 px-2 py-0.5 text-xs">
+              <Calendar className="h-3 w-3 mr-1" />
+              {format(new Date(), "dd MMM yyyy")}
+            </Badge>
+          </div>
         </div>
-        <div className="flex items-center gap-2 flex-wrap">
-          <Badge variant="secondary" className="px-2 py-0.5 text-xs">
-            {user?.role ? roleLabels[user.role] : "Staff"}
-          </Badge>
-          <Badge variant="outline" className="px-2 py-0.5 text-xs">
-            <Calendar className="h-3 w-3 mr-1" />
-            {format(new Date(), "dd MMM yyyy")}
-          </Badge>
-        </div>
+        <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/5 to-transparent animate-pulse" />
       </motion.div>
 
       {/* Quick Actions - Horizontal scroll on mobile */}
@@ -313,79 +347,73 @@ export default function DashboardPage() {
         className="flex gap-2 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:flex-wrap"
       >
         <Link href="/production">
-          <Button variant="default" size="sm" className="whitespace-nowrap" data-testid="button-quick-production">
-            <Milk className="h-4 w-4 mr-1.5" />
+          <GlowButton icon={Milk} size="sm" data-testid="button-quick-production">
             <span className="hidden sm:inline">Record</span> Production
-          </Button>
+          </GlowButton>
         </Link>
         <Link href="/deliveries">
-          <Button variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-quick-deliveries">
+          <Button variant="outline" size="sm" className="whitespace-nowrap hover-glow" data-testid="button-quick-deliveries">
             <Truck className="h-4 w-4 mr-1.5" />
             Deliveries
           </Button>
         </Link>
         <Link href="/cattle">
-          <Button variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-quick-cattle">
+          <Button variant="outline" size="sm" className="whitespace-nowrap hover-glow" data-testid="button-quick-cattle">
             <Package className="h-4 w-4 mr-1.5" />
             Cattle
           </Button>
         </Link>
         <Link href="/billing">
-          <Button variant="outline" size="sm" className="whitespace-nowrap" data-testid="button-quick-billing">
+          <Button variant="outline" size="sm" className="whitespace-nowrap hover-glow" data-testid="button-quick-billing">
             <IndianRupee className="h-4 w-4 mr-1.5" />
             Invoice
           </Button>
         </Link>
       </motion.div>
 
-      {/* Stats Cards - 2 columns on mobile */}
-      <motion.div
-        variants={containerVariants}
-        initial="hidden"
-        animate="visible"
-        className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4"
-      >
-        <motion.div variants={itemVariants}>
-          <StatCard
+      {/* Stats Cards - Gradient cards with animations */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
+        <Link href="/production">
+          <GradientCard
             title="Today's Production"
             value={isLoading ? "..." : `${stats?.todayProduction?.toFixed(1) || 0} L`}
-            change={8.2}
             icon={Milk}
-            color="bg-green-500/10 text-green-600 dark:text-green-400"
-            link="/production"
+            variant="green"
+            trend={{ value: 8.2, label: "vs yesterday" }}
+            delay={0.1}
           />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <StatCard
+        </Link>
+        <Link href="/cattle">
+          <GradientCard
             title="Active Cattle"
-            value={isLoading ? "..." : (stats?.totalCattle || 0)}
-            change={2.5}
+            value={isLoading ? "..." : String(stats?.totalCattle || 0)}
             icon={Package}
-            color="bg-blue-500/10 text-blue-600 dark:text-blue-400"
-            link="/cattle"
+            variant="blue"
+            trend={{ value: 2.5, label: "this week" }}
+            delay={0.15}
           />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <StatCard
+        </Link>
+        <Link href="/customers">
+          <GradientCard
             title="Total Customers"
-            value={isLoading ? "..." : (stats?.activeCustomers || 0)}
-            change={12.3}
+            value={isLoading ? "..." : String(stats?.activeCustomers || 0)}
             icon={Users}
-            color="bg-purple-500/10 text-purple-600 dark:text-purple-400"
-            link="/customers"
+            variant="purple"
+            trend={{ value: 12.3, label: "this month" }}
+            delay={0.2}
           />
-        </motion.div>
-        <motion.div variants={itemVariants}>
-          <StatCard
+        </Link>
+        <Link href="/billing">
+          <GradientCard
             title="Monthly Revenue"
             value={isLoading ? "..." : `₹${((stats?.monthlyRevenue || 0) / 1000).toFixed(0)}K`}
-            change={15.8}
             icon={IndianRupee}
-            color="bg-amber-500/10 text-amber-600 dark:text-amber-400"
-            link="/billing"
+            variant="amber"
+            trend={{ value: 15.8, label: "growth" }}
+            delay={0.25}
           />
-        </motion.div>
-      </motion.div>
+        </Link>
+      </div>
 
       {/* Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
@@ -395,15 +423,18 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.3 }}
         >
-          <Card>
+          <Card className="glass-card modern-card overflow-visible">
             <CardHeader className="p-4 md:pb-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <CardTitle className="text-base md:text-lg truncate">Production Trend</CardTitle>
-                  <CardDescription className="text-xs md:text-sm hidden sm:block">Morning and evening milk</CardDescription>
+                  <CardTitle className="text-base md:text-lg truncate flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                    Production Trend
+                  </CardTitle>
+                  <CardDescription className="text-xs md:text-sm hidden sm:block">Morning and evening milk output</CardDescription>
                 </div>
                 <Link href="/production">
-                  <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3">
+                  <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3 hover-glow">
                     <span className="hidden sm:inline">View All</span>
                     <ArrowRight className="h-4 w-4 sm:ml-1" />
                   </Button>
@@ -463,15 +494,18 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <Card>
+          <Card className="glass-card modern-card overflow-visible">
             <CardHeader className="p-4 md:pb-2">
               <div className="flex items-center justify-between gap-2">
                 <div className="min-w-0">
-                  <CardTitle className="text-base md:text-lg truncate">Cattle Breakdown</CardTitle>
-                  <CardDescription className="text-xs md:text-sm hidden sm:block">Current herd status</CardDescription>
+                  <CardTitle className="text-base md:text-lg truncate flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                    Cattle Breakdown
+                  </CardTitle>
+                  <CardDescription className="text-xs md:text-sm hidden sm:block">Current herd composition</CardDescription>
                 </div>
                 <Link href="/cattle">
-                  <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3">
+                  <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3 hover-glow">
                     <span className="hidden sm:inline">View All</span>
                     <ArrowRight className="h-4 w-4 sm:ml-1" />
                   </Button>
@@ -534,9 +568,12 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.5 }}
         >
-          <Card>
+          <Card className="glass-card modern-card overflow-visible">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Today's Deliveries</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Truck className="h-4 w-4 text-green-500" />
+                Today's Deliveries
+              </CardTitle>
               <CardDescription>Delivery status breakdown</CardDescription>
             </CardHeader>
             <CardContent>
@@ -579,9 +616,12 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.6 }}
         >
-          <Card>
+          <Card className="glass-card modern-card overflow-visible">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Breeding Alerts</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Heart className="h-4 w-4 text-pink-500" />
+                Breeding Alerts
+              </CardTitle>
               <CardDescription>Upcoming events & reminders</CardDescription>
             </CardHeader>
             <CardContent>
@@ -633,9 +673,12 @@ export default function DashboardPage() {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.7 }}
         >
-          <Card>
+          <Card className="glass-card modern-card overflow-visible">
             <CardHeader className="pb-2">
-              <CardTitle className="text-lg">Recent Activity</CardTitle>
+              <CardTitle className="text-lg flex items-center gap-2">
+                <Sparkles className="h-4 w-4 text-amber-500" />
+                Recent Activity
+              </CardTitle>
               <CardDescription>Latest system activities</CardDescription>
             </CardHeader>
             <CardContent>

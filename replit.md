@@ -66,6 +66,32 @@ Preferred communication style: Simple, everyday language.
 - **Component Composition**: PageHeader, DataTable, StatusBadge as reusable patterns
 - **Theme System**: CSS variable-based theming with light/dark mode support
 
+### Modern Animation System (January 2026)
+The UI includes extensive animations and modern effects:
+
+#### CSS Animation Classes (index.css)
+- `gradient-animated` / `gradient-animated-fast` - Animated gradient backgrounds
+- `glass-card` / `glass-strong` - Glassmorphism effects with blur
+- `gradient-card-green/blue/amber/purple/red` - Colored gradient stat cards
+- `glow-green/blue/amber/primary` - Glowing box shadows
+- `hover-glow` - Glow effect on hover with lift
+- `shimmer` - Loading skeleton animation
+- `float` - Floating up/down animation
+- `modern-card` - Hover lift with shadow and border color change
+- `btn-gradient` / `btn-gradient-blue` - Gradient button styles
+- `shine` - Shine sweep effect on hover
+- `stagger-1` through `stagger-5` - Sequential animation delays
+
+#### Reusable Animated Components
+- `AnimatedCounter` / `AnimatedNumber` - Numbers that count up on scroll
+- `GradientCard` - Stat card with gradient background, icon, trend indicator
+- `GlowButton` - Gradient button with hover glow and loading state
+
+#### Mobile Layout
+- Bottom navigation with gradient-colored active icons
+- Glassmorphism mobile header with status indicator
+- Safe area padding for notched devices
+
 ## External Dependencies
 
 ### Supabase Integration

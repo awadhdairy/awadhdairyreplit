@@ -785,43 +785,43 @@ export default function BillingPage() {
         </Button>
       </PageHeader>
 
-      {/* Stats Cards - 2x2 on mobile */}
-      <motion.div
+      {/* Stats Cards - Modern gradient cards */}
+      <motion.div 
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
       >
-        <Card className="hover-elevate">
+        <Card className="gradient-card-green overflow-visible stagger-1">
           <CardContent className="p-3 md:p-4">
             <p className="text-xs md:text-sm text-muted-foreground">Total Billed</p>
-            <p className="text-lg md:text-2xl font-bold text-primary">
+            <p className="text-lg md:text-2xl font-bold text-green-600 dark:text-green-400">
               <span className="md:hidden">₹{stats.total >= 1000 ? `${(stats.total / 1000).toFixed(1)}K` : stats.total.toLocaleString("en-IN")}</span>
               <span className="hidden md:inline">₹{stats.total.toLocaleString("en-IN")}</span>
             </p>
           </CardContent>
         </Card>
-        <Card className="hover-elevate">
+        <Card className="gradient-card-blue overflow-visible stagger-2">
           <CardContent className="p-3 md:p-4">
             <p className="text-xs md:text-sm text-muted-foreground">Collected</p>
-            <p className="text-lg md:text-2xl font-bold text-primary">
+            <p className="text-lg md:text-2xl font-bold text-blue-600 dark:text-blue-400">
               <span className="md:hidden">₹{stats.collected >= 1000 ? `${(stats.collected / 1000).toFixed(1)}K` : stats.collected.toLocaleString("en-IN")}</span>
               <span className="hidden md:inline">₹{stats.collected.toLocaleString("en-IN")}</span>
             </p>
           </CardContent>
         </Card>
-        <Card className="hover-elevate">
+        <Card className="gradient-card-amber overflow-visible stagger-3">
           <CardContent className="p-3 md:p-4">
             <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
-            <p className="text-lg md:text-2xl font-bold text-destructive">
+            <p className="text-lg md:text-2xl font-bold text-amber-600 dark:text-amber-400">
               <span className="md:hidden">₹{stats.pending >= 1000 ? `${(stats.pending / 1000).toFixed(1)}K` : stats.pending.toLocaleString("en-IN")}</span>
               <span className="hidden md:inline">₹{stats.pending.toLocaleString("en-IN")}</span>
             </p>
           </CardContent>
         </Card>
-        <Card className="hover-elevate">
+        <Card className="gradient-card-red overflow-visible stagger-4">
           <CardContent className="p-3 md:p-4">
             <p className="text-xs md:text-sm text-muted-foreground">Overdue</p>
-            <p className="text-lg md:text-2xl font-bold text-destructive">
+            <p className="text-lg md:text-2xl font-bold text-red-600 dark:text-red-400">
               <span className="md:hidden">₹{stats.overdue >= 1000 ? `${(stats.overdue / 1000).toFixed(1)}K` : stats.overdue.toLocaleString("en-IN")}</span>
               <span className="hidden md:inline">₹{stats.overdue.toLocaleString("en-IN")}</span>
             </p>

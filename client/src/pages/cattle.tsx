@@ -363,43 +363,61 @@ export default function CattlePage() {
         </Button>
       </PageHeader>
 
-      {/* Stats Cards - Mobile scroll, Desktop grid */}
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 md:overflow-visible"
-      >
-        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto" onClick={() => setFilterStatus("all")}>
-          <CardContent className="p-3 md:p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">Total</p>
-            <p className="text-xl md:text-2xl font-bold text-primary">{stats.total}</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto" onClick={() => setFilterStatus("active")}>
-          <CardContent className="p-3 md:p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">Active</p>
-            <p className="text-xl md:text-2xl font-bold text-green-600">{stats.active}</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto">
-          <CardContent className="p-3 md:p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">Lactating</p>
-            <p className="text-xl md:text-2xl font-bold text-blue-600">{stats.lactating}</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto">
-          <CardContent className="p-3 md:p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">Pregnant</p>
-            <p className="text-xl md:text-2xl font-bold text-purple-600">{stats.pregnant}</p>
-          </CardContent>
-        </Card>
-        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto">
-          <CardContent className="p-3 md:p-4">
-            <p className="text-xs md:text-sm text-muted-foreground">Dry</p>
-            <p className="text-xl md:text-2xl font-bold text-amber-600">{stats.dry}</p>
-          </CardContent>
-        </Card>
-      </motion.div>
+      {/* Stats Cards - Modern gradient cards */}
+      <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 md:overflow-visible">
+        <motion.div 
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.05 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-green rounded-xl p-3 md:p-4 cursor-pointer shrink-0 w-[120px] md:w-auto modern-card"
+          onClick={() => setFilterStatus("all")}
+        >
+          <p className="text-xs md:text-sm text-muted-foreground">Total</p>
+          <p className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">{stats.total}</p>
+        </motion.div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.1 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-blue rounded-xl p-3 md:p-4 cursor-pointer shrink-0 w-[120px] md:w-auto modern-card"
+          onClick={() => setFilterStatus("active")}
+        >
+          <p className="text-xs md:text-sm text-muted-foreground">Active</p>
+          <p className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</p>
+        </motion.div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.15 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-purple rounded-xl p-3 md:p-4 cursor-pointer shrink-0 w-[120px] md:w-auto modern-card"
+        >
+          <p className="text-xs md:text-sm text-muted-foreground">Lactating</p>
+          <p className="text-xl md:text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.lactating}</p>
+        </motion.div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.2 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-amber rounded-xl p-3 md:p-4 cursor-pointer shrink-0 w-[120px] md:w-auto modern-card"
+        >
+          <p className="text-xs md:text-sm text-muted-foreground">Pregnant</p>
+          <p className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.pregnant}</p>
+        </motion.div>
+        <motion.div 
+          initial={{ opacity: 0, y: 20, scale: 0.95 }}
+          animate={{ opacity: 1, y: 0, scale: 1 }}
+          transition={{ delay: 0.25 }}
+          whileHover={{ scale: 1.03, y: -3 }}
+          className="gradient-card-red rounded-xl p-3 md:p-4 cursor-pointer shrink-0 w-[120px] md:w-auto modern-card"
+        >
+          <p className="text-xs md:text-sm text-muted-foreground">Dry</p>
+          <p className="text-xl md:text-2xl font-bold text-red-600 dark:text-red-400">{stats.dry}</p>
+        </motion.div>
+      </div>
 
       {/* Filter */}
       <div className="flex items-center gap-2 md:gap-4">
