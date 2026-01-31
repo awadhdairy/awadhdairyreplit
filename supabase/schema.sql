@@ -642,12 +642,9 @@ CREATE INDEX IF NOT EXISTS idx_vendor_payments_vendor ON vendor_payments(vendor_
 -- Insert Default Data
 -- ============================================
 
--- Insert default admin users (PIN: 123456)
+-- Insert admin user
 INSERT INTO profiles (full_name, phone, pin_hash, role, is_active)
-VALUES 
-  ('Admin User', '9876543210', hash_pin('123456'), 'super_admin', true),
-  ('Manager User', '9876543211', hash_pin('123456'), 'manager', true),
-  ('Delivery User', '9876543212', hash_pin('123456'), 'delivery_staff', true)
+VALUES ('Admin', '7897716792', hash_pin('101101'), 'super_admin', true)
 ON CONFLICT (phone) DO NOTHING;
 
 -- Insert expense categories

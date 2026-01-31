@@ -15,10 +15,8 @@ The system is built as a **frontend-only React application** that connects direc
 - **Direct database access** - Frontend uses `@supabase/supabase-js` client directly
 - **Schema SQL** - Complete database schema in `supabase/schema.sql` (execute in Supabase SQL Editor)
 
-### Default Admin Users
-- Phone: 9876543210, PIN: 123456 (Admin)
-- Phone: 9876543211, PIN: 123456 (Manager)
-- Phone: 9876543212, PIN: 123456 (Delivery)
+### Admin Access
+- Phone: 7897716792, PIN: 101101 (Super Admin)
 
 ## User Preferences
 
