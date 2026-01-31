@@ -1,9 +1,21 @@
 import { createContext, useContext, useEffect, useState, useCallback } from 'react';
 import { api, getStoredSession, storeSession, clearSession, getStoredUser } from '@/lib/supabase';
-import type { Profile, LoginResponse } from '@shared/types';
+import type { LoginResponse } from '@shared/types';
+
+interface UserProfile {
+  id: string;
+  full_name: string;
+  phone: string;
+  role: string;
+  is_active: boolean;
+  email?: string | null;
+  avatar_url?: string | null;
+  created_at?: string;
+  updated_at?: string;
+}
 
 interface AuthContextType {
-  user: Profile | null;
+  user: UserProfile | null;
   sessionToken: string | null;
   isLoading: boolean;
   isAuthenticated: boolean;
@@ -15,7 +27,7 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<Profile | null>(null);
+  const [user, setUser] = useState<UserProfile | null>(null);
   const [sessionToken, setSessionToken] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
@@ -61,17 +73,25 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       const result = await api.auth.login(phone, pin);
 
       if (!result.success) {
-        return { success: false, message: result.message || 'Login failed' };
+        return { success: false, message: 'Login failed' };
       }
 
-      storeSession(result.session_token, result.user);
+      const userProfile: UserProfile = {
+        id: result.user.id,
+        full_name: result.user.full_name,
+        phone: result.user.phone,
+        role: result.user.role,
+        is_active: result.user.is_active,
+      };
+
+      storeSession(result.session_token, userProfile);
       setSessionToken(result.session_token);
-      setUser(result.user);
+      setUser(userProfile);
 
       return {
         success: true,
         session_token: result.session_token,
-        user: result.user
+        user: userProfile as any
       };
     } catch (err: any) {
       return { success: false, message: err.message || 'Login failed' };
