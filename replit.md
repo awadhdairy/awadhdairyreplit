@@ -4,7 +4,22 @@
 
 Awadh Dairy is a comprehensive dairy farm and milk distribution management ERP system designed for daily operational use. The application manages cattle, milk production, customer subscriptions, deliveries, billing, employees, inventory, and equipment for a dairy farm operation.
 
-The system is built as a full-stack TypeScript application with a React frontend and Express backend, using Supabase for authentication and PostgreSQL for data storage.
+The system is built as a full-stack TypeScript application with a React frontend and Express backend, using Replit's PostgreSQL database with Drizzle ORM for data storage and custom PIN-based authentication.
+
+## Recent Changes (January 2026)
+
+### Database Migration: Supabase to Replit PostgreSQL
+- Migrated from Supabase to Replit's built-in PostgreSQL database
+- Implemented custom PIN-based authentication with SHA256 hashing (salt: 'awadh_dairy_salt')
+- Added server-side session management with 24-hour token expiry
+- All API routes now protected with Bearer token authentication middleware
+- Added Zod validation for all POST/PUT endpoints using drizzle-zod schemas
+- Removed @supabase/supabase-js dependency
+
+### Default Admin Users
+- Phone: 9876543210, PIN: 123456 (Admin)
+- Phone: 9876543211, PIN: 123456 (Manager)
+- Phone: 9876543212, PIN: 123456 (Delivery)
 
 ## User Preferences
 
@@ -27,18 +42,22 @@ Preferred communication style: Simple, everyday language.
 - **Language**: TypeScript with ESM modules
 - **Build Tool**: Vite for frontend, esbuild for server bundling
 - **API Pattern**: RESTful endpoints prefixed with `/api`
+- **Database**: Replit PostgreSQL with Drizzle ORM
+- **Authentication**: Custom PIN-based auth with session tokens
 
 ### Authentication System
 - Custom PIN-based authentication (6-digit PIN with phone number)
-- Session management via Supabase with custom `auth_sessions` table
-- Rate limiting for failed login attempts
+- Server-side session management with 24-hour token expiry
+- SHA256 password hashing with salt
+- Bearer token authentication for all protected API endpoints
 - Role-based access control with 7 user roles: super_admin, manager, accountant, delivery_staff, farm_worker, vet_staff, auditor
 
 ### Data Layer
 - **ORM**: Drizzle ORM with PostgreSQL dialect
 - **Schema Validation**: Zod with drizzle-zod integration
-- **Database**: PostgreSQL (via Supabase)
-- **Schema Location**: `shared/schema.ts`
+- **Database**: Replit PostgreSQL (Neon-backed)
+- **Schema Location**: `shared/schema.ts` (30+ tables)
+- **Connection**: Uses DATABASE_URL environment variable
 
 ### Project Structure
 ```
@@ -47,26 +66,41 @@ Preferred communication style: Simple, everyday language.
 │       ├── components/   # Reusable UI components
 │       ├── contexts/     # React contexts (Auth)
 │       ├── hooks/        # Custom React hooks
-│       ├── lib/          # Utilities and configurations
+│       ├── lib/          # Utilities and API client
 │       └── pages/        # Page components
 ├── server/           # Express backend
 │   ├── index.ts      # Server entry point
-│   ├── routes.ts     # API route definitions
-│   ├── storage.ts    # Data storage interface
-│   └── vite.ts       # Vite dev server integration
+│   ├── routes.ts     # API route definitions with auth middleware
+│   ├── storage.ts    # Database operations via Drizzle
+│   └── db.ts         # Database connection
 ├── shared/           # Shared types and schemas
-│   ├── schema.ts     # Drizzle database schema
+│   ├── schema.ts     # Drizzle database schema (30+ tables)
 │   └── types.ts      # TypeScript type definitions
-└── migrations/       # Database migrations
+└── drizzle.config.ts # Drizzle configuration
 ```
 
 ### Key Design Patterns
-- **Storage Interface**: Abstract `IStorage` interface for data operations, currently using `MemStorage` (in-memory) with easy path to database implementation
+- **Storage Interface**: Database operations via Drizzle ORM in `server/storage.ts`
+- **Auth Middleware**: Bearer token validation for protected routes
+- **Request Validation**: Zod schemas for all POST/PUT endpoints
 - **Protected Routes**: Authentication wrapper for dashboard routes
 - **Component Composition**: PageHeader, DataTable, StatusBadge as reusable patterns
 - **Theme System**: CSS variable-based theming with light/dark mode support
 
-### Modern Animation System (January 2026)
+### Database Schema (30+ tables)
+- **Core**: profiles, user_sessions
+- **Cattle Management**: cattle, milk_production, health_records, breeding_records
+- **Sales & Delivery**: customers, products, routes, deliveries, delivery_items
+- **Billing**: invoices, invoice_items, payments, bottle_transactions
+- **HR**: employees, attendance, payroll
+- **Finance**: expenses, expense_categories
+- **Inventory**: inventory_items, inventory_transactions
+- **Equipment**: equipment, equipment_maintenance
+- **Procurement**: milk_vendors, milk_procurement, vendor_payments
+- **Suppliers**: suppliers, purchase_orders, purchase_order_items
+- **System**: audit_logs, dairy_settings
+
+### Modern Animation System
 The UI includes extensive animations and modern effects:
 
 #### CSS Animation Classes (index.css)
@@ -92,28 +126,26 @@ The UI includes extensive animations and modern effects:
 - Glassmorphism mobile header with status indicator
 - Safe area padding for notched devices
 
-## External Dependencies
+## Environment Variables
 
-### Supabase Integration
-- **Purpose**: Authentication, database, and real-time features
-- **Client Library**: `@supabase/supabase-js`
-- **Environment Variables Required**:
-  - `VITE_SUPABASE_URL`: Supabase project URL
-  - `VITE_SUPABASE_PUBLISHABLE_KEY`: Supabase anon/public key
-  - `DATABASE_URL`: PostgreSQL connection string for Drizzle
+### Required
+- `DATABASE_URL`: PostgreSQL connection string (auto-provided by Replit)
 
-### Database
-- PostgreSQL via Supabase
-- Drizzle ORM for schema management and queries
-- Migrations stored in `/migrations` directory
-- Push schema changes with `npm run db:push`
+### Optional (No longer required after Supabase migration)
+- ~~`VITE_SUPABASE_URL`~~: Removed - was Supabase project URL
+- ~~`VITE_SUPABASE_PUBLISHABLE_KEY`~~: Removed - was Supabase anon/public key
 
-### Third-Party Libraries
+## Database Commands
+
+- `npm run db:push` - Push schema changes to database
+- `npm run db:push --force` - Force push schema (use with caution)
+
+## Third-Party Libraries
 - **PDF Generation**: jsPDF with jspdf-autotable (for reports/invoices)
 - **Excel Export**: xlsx library
-- **Session Storage**: connect-pg-simple for Express sessions
+- **Database**: drizzle-orm with pg driver
 
-### Development Tools
+## Development Tools
 - Replit-specific plugins for development (cartographer, dev-banner, runtime-error-modal)
 - TypeScript with strict mode enabled
 - Path aliases: `@/` for client/src, `@shared/` for shared directory
