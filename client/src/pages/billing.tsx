@@ -770,63 +770,69 @@ export default function BillingPage() {
   }
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
-        title="Billing & Invoices"
-        description="Generate modern invoices with auto-calculated deliveries"
+        title="Billing"
+        description="Generate invoices"
         action={{
-          label: "Generate Invoice",
+          label: "New Invoice",
           onClick: () => setIsDialogOpen(true),
         }}
       >
-        <Button variant="outline" size="sm" onClick={handleExportAll} data-testid="button-export-all">
+        <Button variant="outline" size="sm" onClick={handleExportAll} data-testid="button-export-all" className="hidden md:flex">
           <FileSpreadsheet className="h-4 w-4 mr-2" />
           Export All
         </Button>
       </PageHeader>
 
+      {/* Stats Cards - 2x2 on mobile */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
       >
         <Card className="hover-elevate">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Total Billed</p>
-            <p className="text-2xl font-bold text-primary">
-              ₹{stats.total.toLocaleString("en-IN")}
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Total Billed</p>
+            <p className="text-lg md:text-2xl font-bold text-primary">
+              <span className="md:hidden">₹{stats.total >= 1000 ? `${(stats.total / 1000).toFixed(1)}K` : stats.total.toLocaleString("en-IN")}</span>
+              <span className="hidden md:inline">₹{stats.total.toLocaleString("en-IN")}</span>
             </p>
           </CardContent>
         </Card>
         <Card className="hover-elevate">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Collected</p>
-            <p className="text-2xl font-bold text-primary">
-              ₹{stats.collected.toLocaleString("en-IN")}
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Collected</p>
+            <p className="text-lg md:text-2xl font-bold text-primary">
+              <span className="md:hidden">₹{stats.collected >= 1000 ? `${(stats.collected / 1000).toFixed(1)}K` : stats.collected.toLocaleString("en-IN")}</span>
+              <span className="hidden md:inline">₹{stats.collected.toLocaleString("en-IN")}</span>
             </p>
           </CardContent>
         </Card>
         <Card className="hover-elevate">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Pending</p>
-            <p className="text-2xl font-bold text-destructive">
-              ₹{stats.pending.toLocaleString("en-IN")}
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Pending</p>
+            <p className="text-lg md:text-2xl font-bold text-destructive">
+              <span className="md:hidden">₹{stats.pending >= 1000 ? `${(stats.pending / 1000).toFixed(1)}K` : stats.pending.toLocaleString("en-IN")}</span>
+              <span className="hidden md:inline">₹{stats.pending.toLocaleString("en-IN")}</span>
             </p>
           </CardContent>
         </Card>
         <Card className="hover-elevate">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Overdue</p>
-            <p className="text-2xl font-bold text-destructive">
-              ₹{stats.overdue.toLocaleString("en-IN")}
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Overdue</p>
+            <p className="text-lg md:text-2xl font-bold text-destructive">
+              <span className="md:hidden">₹{stats.overdue >= 1000 ? `${(stats.overdue / 1000).toFixed(1)}K` : stats.overdue.toLocaleString("en-IN")}</span>
+              <span className="hidden md:inline">₹{stats.overdue.toLocaleString("en-IN")}</span>
             </p>
           </CardContent>
         </Card>
       </motion.div>
 
-      <div className="flex items-center gap-4">
+      {/* Filter - Mobile optimized */}
+      <div className="flex flex-col sm:flex-row gap-2 sm:items-center sm:gap-4">
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px]" data-testid="select-invoice-status">
+          <SelectTrigger className="w-full sm:w-[180px]" data-testid="select-invoice-status">
             <SelectValue placeholder="Filter by status" />
           </SelectTrigger>
           <SelectContent>
@@ -837,9 +843,14 @@ export default function BillingPage() {
             <SelectItem value="overdue">Overdue</SelectItem>
           </SelectContent>
         </Select>
-        <span className="text-sm text-muted-foreground">
-          Showing {filteredInvoices.length} of {invoicesWithCustomer.length} invoices
-        </span>
+        <div className="flex items-center justify-between">
+          <span className="text-xs md:text-sm text-muted-foreground">
+            {filteredInvoices.length} of {invoicesWithCustomer.length} invoices
+          </span>
+          <Button variant="outline" size="sm" onClick={handleExportAll} className="md:hidden">
+            <FileSpreadsheet className="h-4 w-4" />
+          </Button>
+        </div>
       </div>
 
       <motion.div

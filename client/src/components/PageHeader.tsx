@@ -24,22 +24,22 @@ export function PageHeader({
   const ActionIcon = action?.icon || Plus;
 
   return (
-    <div className={cn("flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6", className)}>
-      <div>
-        <h1 className="text-2xl md:text-3xl font-bold tracking-tight" data-testid="page-title">
+    <div className={cn("flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 mb-4 md:mb-6", className)}>
+      <div className="min-w-0 flex-1">
+        <h1 className="text-xl md:text-2xl lg:text-3xl font-bold tracking-tight truncate sm:overflow-visible sm:whitespace-normal" data-testid="page-title">
           {title}
         </h1>
         {description && (
-          <p className="text-muted-foreground mt-1" data-testid="page-description">
+          <p className="text-sm md:text-base text-muted-foreground mt-0.5 truncate sm:overflow-visible sm:whitespace-normal" data-testid="page-description">
             {description}
           </p>
         )}
       </div>
-      <div className="flex items-center gap-2">
+      <div className="flex items-center gap-2 shrink-0">
         {children}
         {action && (
-          <Button onClick={action.onClick} data-testid="button-page-action">
-            <ActionIcon className="h-4 w-4 mr-2" />
+          <Button size="sm" onClick={action.onClick} data-testid="button-page-action" className="whitespace-nowrap">
+            <ActionIcon className="h-4 w-4 mr-1.5" />
             {action.label}
           </Button>
         )}

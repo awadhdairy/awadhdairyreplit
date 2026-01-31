@@ -205,81 +205,83 @@ export default function ProductionPage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Milk Production"
-        description="Record and track daily milk production"
+        description="Record and track production"
         action={{
-          label: "Record Production",
+          label: "Record",
           onClick: () => setIsDialogOpen(true),
         }}
       >
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="hidden md:flex">
           <Download className="h-4 w-4 mr-2" />
           Export
         </Button>
       </PageHeader>
 
-      {/* Date and Session Selector */}
-      <div className="flex flex-wrap items-center gap-4">
+      {/* Date and Session Selector - Mobile optimized */}
+      <div className="flex flex-col sm:flex-row gap-3">
         <div className="flex items-center gap-2">
-          <Calendar className="h-4 w-4 text-muted-foreground" />
+          <Calendar className="h-4 w-4 text-muted-foreground shrink-0" />
           <Input
             type="date"
             value={selectedDate}
             onChange={(e) => setSelectedDate(e.target.value)}
-            className="w-auto"
+            className="flex-1 sm:w-auto"
             data-testid="input-date"
           />
         </div>
-        <Tabs value={selectedSession} onValueChange={(v) => setSelectedSession(v as SessionType)}>
-          <TabsList>
-            <TabsTrigger value="morning" className="gap-2" data-testid="tab-morning">
+        <Tabs value={selectedSession} onValueChange={(v) => setSelectedSession(v as SessionType)} className="w-full sm:w-auto">
+          <TabsList className="w-full sm:w-auto">
+            <TabsTrigger value="morning" className="gap-1.5 flex-1 sm:flex-initial" data-testid="tab-morning">
               <Sun className="h-4 w-4" />
-              Morning
+              <span className="hidden xs:inline">Morning</span>
+              <span className="xs:hidden">AM</span>
             </TabsTrigger>
-            <TabsTrigger value="evening" className="gap-2" data-testid="tab-evening">
+            <TabsTrigger value="evening" className="gap-1.5 flex-1 sm:flex-initial" data-testid="tab-evening">
               <Moon className="h-4 w-4" />
-              Evening
+              <span className="hidden xs:inline">Evening</span>
+              <span className="xs:hidden">PM</span>
             </TabsTrigger>
           </TabsList>
         </Tabs>
       </div>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - 2x2 on mobile */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 md:grid-cols-4 gap-4"
+        className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
       >
         <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Today's Total</p>
-            <p className="text-2xl font-bold text-primary">{totalToday.toFixed(1)} L</p>
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Today's Total</p>
+            <p className="text-xl md:text-2xl font-bold text-primary">{totalToday.toFixed(1)} L</p>
           </CardContent>
         </Card>
         <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Sun className="h-4 w-4 text-amber-500" />
-              <p className="text-sm text-muted-foreground">Morning</p>
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-1">
+              <Sun className="h-3 w-3 md:h-4 md:w-4 text-amber-500" />
+              <p className="text-xs md:text-sm text-muted-foreground">Morning</p>
             </div>
-            <p className="text-2xl font-bold text-amber-600">{morningTotal.toFixed(1)} L</p>
+            <p className="text-xl md:text-2xl font-bold text-amber-600">{morningTotal.toFixed(1)} L</p>
           </CardContent>
         </Card>
         <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-4">
-            <div className="flex items-center gap-2">
-              <Moon className="h-4 w-4 text-indigo-500" />
-              <p className="text-sm text-muted-foreground">Evening</p>
+          <CardContent className="p-3 md:p-4">
+            <div className="flex items-center gap-1">
+              <Moon className="h-3 w-3 md:h-4 md:w-4 text-indigo-500" />
+              <p className="text-xs md:text-sm text-muted-foreground">Evening</p>
             </div>
-            <p className="text-2xl font-bold text-indigo-600">{eveningTotal.toFixed(1)} L</p>
+            <p className="text-xl md:text-2xl font-bold text-indigo-600">{eveningTotal.toFixed(1)} L</p>
           </CardContent>
         </Card>
         <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Avg Fat %</p>
-            <p className="text-2xl font-bold text-green-600">{avgFat.toFixed(1)}%</p>
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Avg Fat %</p>
+            <p className="text-xl md:text-2xl font-bold text-green-600">{avgFat.toFixed(1)}%</p>
           </CardContent>
         </Card>
       </motion.div>
@@ -291,17 +293,18 @@ export default function ProductionPage() {
         transition={{ delay: 0.1 }}
       >
         <Card>
-          <CardHeader className="pb-2">
-            <div className="flex items-center justify-between">
-              <CardTitle className="text-lg">7-Day Production Trend</CardTitle>
-              <div className="flex items-center gap-1 text-sm text-green-600">
-                <TrendingUp className="h-4 w-4" />
-                +8.2% from last week
+          <CardHeader className="p-4 md:pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <CardTitle className="text-base md:text-lg">Production Trend</CardTitle>
+              <div className="flex items-center gap-1 text-xs md:text-sm text-green-600">
+                <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
+                <span className="hidden sm:inline">+8.2% from last week</span>
+                <span className="sm:hidden">+8.2%</span>
               </div>
             </div>
           </CardHeader>
-          <CardContent>
-            <div className="h-[250px]">
+          <CardContent className="p-4 pt-0">
+            <div className="h-[180px] md:h-[250px]">
               <ResponsiveContainer width="100%" height="100%">
                 <AreaChart data={chartData}>
                   <defs>

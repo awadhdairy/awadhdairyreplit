@@ -345,10 +345,10 @@ export default function CattlePage() {
   };
 
   return (
-    <div className="p-6 space-y-6">
+    <div className="p-4 md:p-6 space-y-4 md:space-y-6">
       <PageHeader
         title="Cattle Management"
-        description="Manage your dairy herd and track cattle information"
+        description="Manage your dairy herd"
         action={{
           label: "Add Cattle",
           onClick: () => {
@@ -357,56 +357,56 @@ export default function CattlePage() {
           },
         }}
       >
-        <Button variant="outline" size="sm">
+        <Button variant="outline" size="sm" className="hidden md:flex">
           <Download className="h-4 w-4 mr-2" />
           Export
         </Button>
       </PageHeader>
 
-      {/* Stats Cards */}
+      {/* Stats Cards - Mobile scroll, Desktop grid */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="grid grid-cols-2 md:grid-cols-5 gap-4"
+        className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 md:overflow-visible"
       >
-        <Card className="hover-elevate cursor-pointer" onClick={() => setFilterStatus("all")}>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Total Cattle</p>
-            <p className="text-2xl font-bold text-primary">{stats.total}</p>
+        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto" onClick={() => setFilterStatus("all")}>
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Total</p>
+            <p className="text-xl md:text-2xl font-bold text-primary">{stats.total}</p>
           </CardContent>
         </Card>
-        <Card className="hover-elevate cursor-pointer" onClick={() => setFilterStatus("active")}>
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Active</p>
-            <p className="text-2xl font-bold text-green-600">{stats.active}</p>
+        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto" onClick={() => setFilterStatus("active")}>
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Active</p>
+            <p className="text-xl md:text-2xl font-bold text-green-600">{stats.active}</p>
           </CardContent>
         </Card>
-        <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Lactating</p>
-            <p className="text-2xl font-bold text-blue-600">{stats.lactating}</p>
+        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto">
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Lactating</p>
+            <p className="text-xl md:text-2xl font-bold text-blue-600">{stats.lactating}</p>
           </CardContent>
         </Card>
-        <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Pregnant</p>
-            <p className="text-2xl font-bold text-purple-600">{stats.pregnant}</p>
+        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto">
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Pregnant</p>
+            <p className="text-xl md:text-2xl font-bold text-purple-600">{stats.pregnant}</p>
           </CardContent>
         </Card>
-        <Card className="hover-elevate cursor-pointer">
-          <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Dry</p>
-            <p className="text-2xl font-bold text-amber-600">{stats.dry}</p>
+        <Card className="hover-elevate cursor-pointer shrink-0 w-[120px] md:w-auto">
+          <CardContent className="p-3 md:p-4">
+            <p className="text-xs md:text-sm text-muted-foreground">Dry</p>
+            <p className="text-xl md:text-2xl font-bold text-amber-600">{stats.dry}</p>
           </CardContent>
         </Card>
       </motion.div>
 
       {/* Filter */}
-      <div className="flex items-center gap-4">
+      <div className="flex items-center gap-2 md:gap-4">
         <Select value={filterStatus} onValueChange={setFilterStatus}>
-          <SelectTrigger className="w-[180px]" data-testid="select-filter-status">
-            <Filter className="h-4 w-4 mr-2" />
-            <SelectValue placeholder="Filter by status" />
+          <SelectTrigger className="w-[140px] md:w-[180px]" data-testid="select-filter-status">
+            <Filter className="h-4 w-4 mr-1 md:mr-2" />
+            <SelectValue placeholder="Filter" />
           </SelectTrigger>
           <SelectContent>
             <SelectItem value="all">All Status</SelectItem>
@@ -416,6 +416,9 @@ export default function CattlePage() {
             <SelectItem value="dry">Dry</SelectItem>
           </SelectContent>
         </Select>
+        <Button variant="outline" size="sm" className="md:hidden">
+          <Download className="h-4 w-4" />
+        </Button>
       </div>
 
       {/* Data Table */}
