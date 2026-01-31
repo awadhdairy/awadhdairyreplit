@@ -1,0 +1,17 @@
+# Ignore server-side code (not needed for static deployment)
+server/
+script/
+
+# Ignore development files
+.replit
+.cache/
+.local/
+.config/
+.upm/
+*.log
+
+# Ignore database files
+drizzle.config.ts
+
+# Ignore Replit-specific
+attached_assets/
