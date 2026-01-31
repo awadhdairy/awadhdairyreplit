@@ -271,6 +271,72 @@ export default function DashboardPage() {
     return customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0);
   }, [customers]);
 
+  // Calculate top customers by revenue (from invoices)
+  const topCustomers = useMemo(() => {
+    const customerRevenue: Record<string, { name: string; revenue: number; invoiceCount: number }> = {};
+    
+    invoices.forEach(inv => {
+      const customer = customers.find(c => c.id === inv.customer_id);
+      const customerName = customer?.name || 'Unknown';
+      const customerId = inv.customer_id || 'unknown';
+      
+      if (!customerRevenue[customerId]) {
+        customerRevenue[customerId] = { name: customerName, revenue: 0, invoiceCount: 0 };
+      }
+      customerRevenue[customerId].revenue += inv.total_amount || 0;
+      customerRevenue[customerId].invoiceCount += 1;
+    });
+    
+    return Object.values(customerRevenue)
+      .sort((a, b) => b.revenue - a.revenue)
+      .slice(0, 5)
+      .map((c, i) => ({
+        ...c,
+        revenue: Math.round(c.revenue),
+        color: ["hsl(142, 55%, 38%)", "hsl(199, 89%, 48%)", "hsl(280, 65%, 60%)", "hsl(48, 96%, 53%)", "hsl(340, 65%, 55%)"][i],
+      }));
+  }, [invoices, customers]);
+
+  // Calculate monthly revenue trend (last 6 months)
+  const monthlyRevenueData = useMemo(() => {
+    const months: { month: string; billed: number; collected: number }[] = [];
+    
+    for (let i = 5; i >= 0; i--) {
+      const date = new Date();
+      date.setMonth(date.getMonth() - i);
+      const monthStart = startOfMonth(date);
+      const monthEnd = endOfMonth(date);
+      const monthName = format(date, 'MMM');
+      
+      const monthInvoices = invoices.filter(inv => {
+        const invDate = new Date(inv.invoice_date);
+        return invDate >= monthStart && invDate <= monthEnd;
+      });
+      
+      months.push({
+        month: monthName,
+        billed: Math.round(monthInvoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0)),
+        collected: Math.round(monthInvoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0)),
+      });
+    }
+    
+    return months;
+  }, [invoices]);
+
+  // Financial summary
+  const financialSummary = useMemo(() => {
+    const totalBilled = invoices.reduce((sum, inv) => sum + (inv.total_amount || 0), 0);
+    const totalCollected = invoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0);
+    const collectionRate = totalBilled > 0 ? (totalCollected / totalBilled) * 100 : 0;
+    
+    return {
+      totalBilled: Math.round(totalBilled),
+      totalCollected: Math.round(totalCollected),
+      outstanding: Math.round(totalBilled - totalCollected),
+      collectionRate: Math.round(collectionRate),
+    };
+  }, [invoices]);
+
   const roleLabels: Record<string, string> = {
     super_admin: "Super Admin",
     manager: "Manager",
@@ -559,6 +625,187 @@ export default function DashboardPage() {
           </Card>
         </motion.div>
       </div>
+
+      {/* Financial Overview Row */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 md:gap-6">
+        {/* Monthly Revenue Trend */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.35 }}
+        >
+          <Card className="glass-card modern-card overflow-visible">
+            <CardHeader className="p-4 md:pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <CardTitle className="text-base md:text-lg truncate flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse" />
+                    Revenue Overview
+                  </CardTitle>
+                  <CardDescription className="text-xs md:text-sm hidden sm:block">Billed vs Collected (Last 6 months)</CardDescription>
+                </div>
+                <div className="flex items-center gap-2 shrink-0">
+                  <Badge className="bg-green-500/20 text-green-600 dark:text-green-400 border-green-500/30 text-xs">
+                    {financialSummary.collectionRate}% collected
+                  </Badge>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="h-[200px] md:h-[280px]">
+                <ResponsiveContainer width="100%" height="100%">
+                  <BarChart data={monthlyRevenueData}>
+                    <defs>
+                      <linearGradient id="billedGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(199, 89%, 48%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(199, 89%, 48%)" stopOpacity={0.6} />
+                      </linearGradient>
+                      <linearGradient id="collectedGradient" x1="0" y1="0" x2="0" y2="1">
+                        <stop offset="0%" stopColor="hsl(142, 55%, 38%)" stopOpacity={1} />
+                        <stop offset="100%" stopColor="hsl(142, 55%, 38%)" stopOpacity={0.6} />
+                      </linearGradient>
+                    </defs>
+                    <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                    <XAxis dataKey="month" stroke="hsl(var(--muted-foreground))" fontSize={12} />
+                    <YAxis stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}K` : v}`} />
+                    <Tooltip
+                      contentStyle={{
+                        backgroundColor: "hsl(var(--card))",
+                        border: "1px solid hsl(var(--border))",
+                        borderRadius: "8px",
+                      }}
+                      formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, '']}
+                    />
+                    <Legend />
+                    <Bar dataKey="billed" name="Billed" fill="url(#billedGradient)" radius={[4, 4, 0, 0]} />
+                    <Bar dataKey="collected" name="Collected" fill="url(#collectedGradient)" radius={[4, 4, 0, 0]} />
+                  </BarChart>
+                </ResponsiveContainer>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+
+        {/* Expense Breakdown */}
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.4 }}
+        >
+          <Card className="glass-card modern-card overflow-visible">
+            <CardHeader className="p-4 md:pb-2">
+              <div className="flex items-center justify-between gap-2">
+                <div className="min-w-0">
+                  <CardTitle className="text-base md:text-lg truncate flex items-center gap-2">
+                    <span className="w-2 h-2 rounded-full bg-purple-500 animate-pulse" />
+                    Expense Breakdown
+                  </CardTitle>
+                  <CardDescription className="text-xs md:text-sm hidden sm:block">Where your money goes</CardDescription>
+                </div>
+                <Badge className="bg-purple-500/20 text-purple-600 dark:text-purple-400 border-purple-500/30 text-xs shrink-0">
+                  ₹{totalExpenses >= 1000 ? `${(totalExpenses/1000).toFixed(0)}K` : totalExpenses} total
+                </Badge>
+              </div>
+            </CardHeader>
+            <CardContent className="p-4 pt-0">
+              <div className="h-[200px] md:h-[280px] flex items-center">
+                <div className="w-2/5 md:w-1/2">
+                  <ResponsiveContainer width="100%" height={180}>
+                    <PieChart>
+                      <Pie
+                        data={expenseBreakdown}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={40}
+                        outerRadius={70}
+                        paddingAngle={2}
+                        dataKey="value"
+                      >
+                        {expenseBreakdown.map((entry, index) => (
+                          <Cell key={`expense-cell-${index}`} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip
+                        contentStyle={{
+                          backgroundColor: "hsl(var(--card))",
+                          border: "1px solid hsl(var(--border))",
+                          borderRadius: "8px",
+                        }}
+                        formatter={(value: number) => [`₹${value.toLocaleString('en-IN')}`, '']}
+                      />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </div>
+                <div className="w-3/5 md:w-1/2 space-y-2 md:space-y-2.5 max-h-[200px] overflow-y-auto">
+                  {expenseBreakdown.map((item) => (
+                    <div key={item.name} className="flex items-center justify-between">
+                      <div className="flex items-center gap-1.5 md:gap-2">
+                        <div
+                          className="w-2.5 h-2.5 md:w-3 md:h-3 rounded-full shrink-0"
+                          style={{ backgroundColor: item.color }}
+                        />
+                        <span className="text-xs md:text-sm truncate">{item.name}</span>
+                      </div>
+                      <span className="text-xs md:text-sm font-medium shrink-0">₹{item.value >= 1000 ? `${(item.value/1000).toFixed(1)}K` : item.value}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      </div>
+
+      {/* Top Customers Row */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.5, delay: 0.45 }}
+      >
+        <Card className="glass-card modern-card overflow-visible">
+          <CardHeader className="p-4 md:pb-2">
+            <div className="flex items-center justify-between gap-2">
+              <div className="min-w-0">
+                <CardTitle className="text-base md:text-lg truncate flex items-center gap-2">
+                  <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                  Top Customers
+                </CardTitle>
+                <CardDescription className="text-xs md:text-sm hidden sm:block">Highest revenue contributors</CardDescription>
+              </div>
+              <Link href="/customers">
+                <Button variant="ghost" size="sm" className="shrink-0 h-8 px-2 md:px-3">
+                  <span className="hidden sm:inline">View All</span>
+                  <ArrowRight className="h-4 w-4 sm:ml-1" />
+                </Button>
+              </Link>
+            </div>
+          </CardHeader>
+          <CardContent className="p-4 pt-0">
+            <div className="h-[200px] md:h-[250px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={topCustomers} layout="vertical">
+                  <CartesianGrid strokeDasharray="3 3" stroke="hsl(var(--border))" />
+                  <XAxis type="number" stroke="hsl(var(--muted-foreground))" fontSize={12} tickFormatter={(v) => `₹${v >= 1000 ? `${(v/1000).toFixed(0)}K` : v}`} />
+                  <YAxis type="category" dataKey="name" stroke="hsl(var(--muted-foreground))" fontSize={11} width={100} tickFormatter={(v) => v.length > 12 ? `${v.slice(0, 12)}...` : v} />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: "hsl(var(--card))",
+                      border: "1px solid hsl(var(--border))",
+                      borderRadius: "8px",
+                    }}
+                    formatter={(value: number, name: string, props: any) => [`₹${value.toLocaleString('en-IN')} (${props.payload.invoiceCount} invoices)`, 'Revenue']}
+                  />
+                  <Bar dataKey="revenue" radius={[0, 4, 4, 0]}>
+                    {topCustomers.map((entry, index) => (
+                      <Cell key={`customer-cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Bar>
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          </CardContent>
+        </Card>
+      </motion.div>
 
       {/* Second Charts Row */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
