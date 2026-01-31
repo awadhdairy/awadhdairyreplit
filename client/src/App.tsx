@@ -144,7 +144,7 @@ function Router() {
 function App() {
   return (
     <QueryClientProvider client={queryClient}>
-      <ThemeProvider defaultTheme="light" storageKey="awadh-dairy-theme">
+      <ThemeProvider defaultTheme="dark" storageKey="awadh-dairy-theme">
         <TooltipProvider>
           <AuthProvider>
             <Router />
