@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Save, Building, User, Lock, Bell, Palette } from "lucide-react";
+import { Save, Building, User, Lock, Bell, Palette, Database, Loader2, CheckCircle, XCircle } from "lucide-react";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -12,6 +12,7 @@ import { PageHeader } from "@/components/PageHeader";
 import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/contexts/AuthContext";
 import { useTheme } from "@/components/ThemeProvider";
+import { api } from "@/lib/supabase";
 
 export default function SettingsPage() {
   const { user } = useAuth();
@@ -42,6 +43,9 @@ export default function SettingsPage() {
     delivery_updates: false,
   });
 
+  const [isSeeding, setIsSeeding] = useState(false);
+  const [seedResults, setSeedResults] = useState<{ module: string; success: boolean; count: number; error?: string }[]>([]);
+
   const handleSaveDairy = () => {
     toast({ title: "Settings Saved", description: "Dairy settings have been updated" });
   };
@@ -61,6 +65,29 @@ export default function SettingsPage() {
     }
     toast({ title: "PIN Changed", description: "Your PIN has been updated successfully" });
     setProfileSettings({ ...profileSettings, current_pin: "", new_pin: "", confirm_pin: "" });
+  };
+
+  const handleSeedDemoData = async () => {
+    setIsSeeding(true);
+    setSeedResults([]);
+    try {
+      const results = await api.seedDemoData();
+      setSeedResults(results);
+      const successCount = results.filter(r => r.success).length;
+      const totalRecords = results.reduce((sum, r) => sum + r.count, 0);
+      toast({ 
+        title: "Demo Data Seeded", 
+        description: `Successfully added ${totalRecords} records across ${successCount} modules` 
+      });
+    } catch (error: any) {
+      toast({ 
+        title: "Seeding Failed", 
+        description: error.message || "Failed to seed demo data", 
+        variant: "destructive" 
+      });
+    } finally {
+      setIsSeeding(false);
+    }
   };
 
   return (
@@ -88,6 +115,10 @@ export default function SettingsPage() {
           <TabsTrigger value="appearance" className="gap-2" data-testid="tab-appearance">
             <Palette className="h-4 w-4" />
             Appearance
+          </TabsTrigger>
+          <TabsTrigger value="developer" className="gap-2" data-testid="tab-developer">
+            <Database className="h-4 w-4" />
+            Developer
           </TabsTrigger>
         </TabsList>
 
@@ -260,6 +291,72 @@ export default function SettingsPage() {
                       System
                     </Button>
                   </div>
+                </div>
+              </CardContent>
+            </Card>
+          </motion.div>
+        </TabsContent>
+
+        <TabsContent value="developer">
+          <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }}>
+            <Card>
+              <CardHeader>
+                <CardTitle>Developer Tools</CardTitle>
+                <CardDescription>Tools for testing and development</CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                <div className="space-y-4">
+                  <div className="p-4 rounded-lg border bg-amber-500/10 border-amber-500/20">
+                    <p className="text-sm text-amber-600 dark:text-amber-400">
+                      This will add sample data to your database for testing. Use with caution in production.
+                    </p>
+                  </div>
+                  
+                  <Button 
+                    onClick={handleSeedDemoData} 
+                    disabled={isSeeding}
+                    className="w-full"
+                    data-testid="button-seed-demo-data"
+                  >
+                    {isSeeding ? (
+                      <>
+                        <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                        Seeding Data...
+                      </>
+                    ) : (
+                      <>
+                        <Database className="h-4 w-4 mr-2" />
+                        Seed Demo Data
+                      </>
+                    )}
+                  </Button>
+
+                  {seedResults.length > 0 && (
+                    <div className="space-y-2">
+                      <Label>Results</Label>
+                      <div className="space-y-2">
+                        {seedResults.map((result, index) => (
+                          <div key={index} className="flex items-center justify-between p-3 rounded-lg border">
+                            <div className="flex items-center gap-2">
+                              {result.success ? (
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                              ) : (
+                                <XCircle className="h-4 w-4 text-red-500" />
+                              )}
+                              <span className="font-medium">{result.module}</span>
+                            </div>
+                            <div className="text-sm text-muted-foreground">
+                              {result.success ? (
+                                <span className="text-green-600 dark:text-green-400">{result.count} records added</span>
+                              ) : (
+                                <span className="text-red-600 dark:text-red-400">{result.error || 'Failed'}</span>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
                 </div>
               </CardContent>
             </Card>
