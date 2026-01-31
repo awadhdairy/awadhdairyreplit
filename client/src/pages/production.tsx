@@ -1,7 +1,8 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Plus, Sun, Moon, Calendar, TrendingUp, Download, Filter } from "lucide-react";
+import { Plus, Sun, Moon, Calendar, TrendingUp, Download, Filter, AlertCircle } from "lucide-react";
+import { useCattle } from "@/hooks/useData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -37,20 +38,13 @@ import {
 } from "recharts";
 import type { MilkProduction, SessionType } from "@shared/types";
 
-// Sample production data
+// Sample production data - only for lactating female cattle (IDs: 1=Lakshmi, 2=Ganga, 5=Saraswati, 8=Parvati)
 const sampleProduction: MilkProduction[] = [
   { id: "1", cattle_id: "1", production_date: "2024-01-30", session: "morning", quantity_liters: 12.5, fat_percentage: 4.2, snf_percentage: 8.5, created_at: "2024-01-30" },
   { id: "2", cattle_id: "1", production_date: "2024-01-30", session: "evening", quantity_liters: 10.0, fat_percentage: 4.0, snf_percentage: 8.3, created_at: "2024-01-30" },
   { id: "3", cattle_id: "2", production_date: "2024-01-30", session: "morning", quantity_liters: 14.0, fat_percentage: 4.5, snf_percentage: 8.8, created_at: "2024-01-30" },
-  { id: "4", cattle_id: "3", production_date: "2024-01-30", session: "morning", quantity_liters: 18.0, fat_percentage: 7.0, snf_percentage: 9.0, created_at: "2024-01-30" },
-  { id: "5", cattle_id: "3", production_date: "2024-01-30", session: "evening", quantity_liters: 15.0, fat_percentage: 6.8, snf_percentage: 8.9, created_at: "2024-01-30" },
-];
-
-const cattleOptions = [
-  { id: "1", tag_number: "AW-001", name: "Lakshmi" },
-  { id: "2", tag_number: "AW-002", name: "Kamdhenu" },
-  { id: "3", tag_number: "AW-003", name: "Nandi" },
-  { id: "4", tag_number: "AW-004", name: "Gauri" },
+  { id: "4", cattle_id: "5", production_date: "2024-01-30", session: "morning", quantity_liters: 11.0, fat_percentage: 4.3, snf_percentage: 8.6, created_at: "2024-01-30" },
+  { id: "5", cattle_id: "8", production_date: "2024-01-30", session: "evening", quantity_liters: 9.5, fat_percentage: 4.1, snf_percentage: 8.4, created_at: "2024-01-30" },
 ];
 
 const chartData = [
@@ -64,11 +58,26 @@ const chartData = [
 ];
 
 export default function ProductionPage() {
+  const { data: cattleData } = useCattle();
   const [production, setProduction] = useState<MilkProduction[]>(sampleProduction);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedSession, setSelectedSession] = useState<SessionType>("morning");
   const { toast } = useToast();
+
+  // Filter cattle to only show lactating females (intelligent milk production eligibility)
+  const eligibleCattle = useMemo(() => {
+    if (!cattleData) return [];
+    return cattleData.filter(cattle => 
+      cattle.gender === 'female' && cattle.lactation_status === 'lactating'
+    );
+  }, [cattleData]);
+
+  // Create lookup map for cattle display in table
+  const cattleLookup = useMemo(() => {
+    if (!cattleData) return new Map();
+    return new Map(cattleData.map(c => [c.id, c]));
+  }, [cattleData]);
 
   const [formData, setFormData] = useState({
     cattle_id: "",
@@ -103,11 +112,11 @@ export default function ProductionPage() {
       key: "cattle_id",
       header: "Cattle",
       render: (item) => {
-        const cattle = cattleOptions.find((c) => c.id === item.cattle_id);
+        const cattle = cattleLookup.get(item.cattle_id);
         return (
           <div>
-            <span className="font-mono text-primary">{cattle?.tag_number}</span>
-            <span className="text-muted-foreground ml-2">{cattle?.name}</span>
+            <span className="font-mono text-primary">{cattle?.tag_number || 'Unknown'}</span>
+            <span className="text-muted-foreground ml-2">{cattle?.name || ''}</span>
           </div>
         );
       },
@@ -151,6 +160,17 @@ export default function ProductionPage() {
       toast({
         title: "Validation Error",
         description: "Please fill all required fields",
+        variant: "destructive",
+      });
+      return;
+    }
+
+    // Validate cattle is eligible (female + lactating)
+    const isEligible = eligibleCattle.some(c => c.id === formData.cattle_id);
+    if (!isEligible) {
+      toast({
+        title: "Invalid Cattle",
+        description: "Only lactating female cattle can produce milk",
         variant: "destructive",
       });
       return;
@@ -342,25 +362,42 @@ export default function ProductionPage() {
           </DialogHeader>
 
           <div className="grid gap-4 py-4">
+            {/* Info banner explaining eligibility */}
+            <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border text-sm" data-testid="info-eligible-cattle">
+              <AlertCircle className="h-4 w-4 mt-0.5 text-primary shrink-0" />
+              <p className="text-muted-foreground">
+                Only <span className="font-medium text-foreground">lactating female</span> cattle can produce milk. 
+                {eligibleCattle.length > 0 
+                  ? ` ${eligibleCattle.length} eligible cattle available.`
+                  : ' No eligible cattle found.'}
+              </p>
+            </div>
+
             <div className="space-y-2">
               <Label htmlFor="cattle">Cattle *</Label>
-              <Select
-                value={formData.cattle_id}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, cattle_id: value })
-                }
-              >
-                <SelectTrigger data-testid="select-cattle">
-                  <SelectValue placeholder="Select cattle" />
-                </SelectTrigger>
-                <SelectContent>
-                  {cattleOptions.map((cattle) => (
-                    <SelectItem key={cattle.id} value={cattle.id}>
-                      {cattle.tag_number} - {cattle.name}
-                    </SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+              {eligibleCattle.length > 0 ? (
+                <Select
+                  value={formData.cattle_id}
+                  onValueChange={(value) =>
+                    setFormData({ ...formData, cattle_id: value })
+                  }
+                >
+                  <SelectTrigger data-testid="select-cattle">
+                    <SelectValue placeholder="Select lactating cattle" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {eligibleCattle.map((cattle) => (
+                      <SelectItem key={cattle.id} value={cattle.id} data-testid={`option-cattle-${cattle.id}`}>
+                        {cattle.tag_number} - {cattle.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                <div className="p-3 rounded-lg border border-dashed text-center text-muted-foreground text-sm" data-testid="text-no-eligible-cattle">
+                  No lactating female cattle available for milk production
+                </div>
+              )}
             </div>
 
             <div className="space-y-2">
@@ -427,7 +464,11 @@ export default function ProductionPage() {
             <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} data-testid="button-submit-production">
+            <Button 
+              onClick={handleSubmit} 
+              disabled={eligibleCattle.length === 0}
+              data-testid="button-submit-production"
+            >
               Record Production
             </Button>
           </DialogFooter>
