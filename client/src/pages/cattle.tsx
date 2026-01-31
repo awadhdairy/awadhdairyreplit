@@ -151,9 +151,9 @@ export default function CattlePage() {
   const stats = useMemo(() => ({
     total: cattle.length,
     active: cattle.filter((c) => c.status === "active").length,
-    lactating: cattle.filter((c) => c.category === "milking").length,
-    pregnant: cattle.filter((c) => c.category === "heifer").length,
-    dry: cattle.filter((c) => c.category === "dry").length,
+    lactating: cattle.filter((c) => c.lactation_status === "lactating").length,
+    pregnant: cattle.filter((c) => c.lactation_status === "pregnant").length,
+    dry: cattle.filter((c) => c.lactation_status === "dry").length,
   }), [cattle]);
 
   const columns: Column<Cattle>[] = [
@@ -177,11 +177,11 @@ export default function CattlePage() {
       sortable: true,
     },
     {
-      key: "category",
-      header: "Category",
+      key: "lactation_status",
+      header: "Lactation Status",
       render: (item) => (
         <Badge variant="outline" className="capitalize">
-          {item.category || item.cattle_type || "-"}
+          {item.lactation_status || "-"}
         </Badge>
       ),
     },
