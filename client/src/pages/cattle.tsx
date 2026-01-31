@@ -109,7 +109,7 @@ export default function CattlePage() {
   const addCattleMutation = useAddCattle();
   const updateCattleMutation = useUpdateCattle();
   const deleteCattleMutation = useDeleteCattle();
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedCattle, setSelectedCattle] = useState<Cattle | null>(null);
@@ -143,9 +143,9 @@ export default function CattlePage() {
   });
 
   const cattle = cattleData || [];
-  
-  const filteredCattle = filterStatus === "all" 
-    ? cattle 
+
+  const filteredCattle = filterStatus === "all"
+    ? cattle
     : cattle.filter(c => c.status === filterStatus);
 
   const stats = useMemo(() => ({
@@ -309,7 +309,16 @@ export default function CattlePage() {
     } else {
       // Create new
       addCattleMutation.mutate(
-        { ...cattlePayload, status: "active", category: "milking" },
+        {
+          ...cattlePayload,
+          status: "active",
+          category: "milking",
+          // Required DB fields not in form
+          lactation_status: "lactating",
+          lactation_number: 1,
+          gender: "female",
+          weight: formData.weight ? parseFloat(formData.weight) : 0
+        },
         {
           onSuccess: () => {
             toast({
@@ -365,7 +374,7 @@ export default function CattlePage() {
 
       {/* Stats Cards - Modern gradient cards */}
       <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide -mx-4 px-4 md:mx-0 md:px-0 md:grid md:grid-cols-5 md:overflow-visible">
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.05 }}
@@ -376,7 +385,7 @@ export default function CattlePage() {
           <p className="text-xs md:text-sm text-muted-foreground">Total</p>
           <p className="text-xl md:text-2xl font-bold text-green-600 dark:text-green-400">{stats.total}</p>
         </motion.div>
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.1 }}
@@ -387,7 +396,7 @@ export default function CattlePage() {
           <p className="text-xs md:text-sm text-muted-foreground">Active</p>
           <p className="text-xl md:text-2xl font-bold text-blue-600 dark:text-blue-400">{stats.active}</p>
         </motion.div>
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.15 }}
@@ -397,7 +406,7 @@ export default function CattlePage() {
           <p className="text-xs md:text-sm text-muted-foreground">Lactating</p>
           <p className="text-xl md:text-2xl font-bold text-purple-600 dark:text-purple-400">{stats.lactating}</p>
         </motion.div>
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.2 }}
@@ -407,7 +416,7 @@ export default function CattlePage() {
           <p className="text-xs md:text-sm text-muted-foreground">Pregnant</p>
           <p className="text-xl md:text-2xl font-bold text-amber-600 dark:text-amber-400">{stats.pregnant}</p>
         </motion.div>
-        <motion.div 
+        <motion.div
           initial={{ opacity: 0, y: 20, scale: 0.95 }}
           animate={{ opacity: 1, y: 0, scale: 1 }}
           transition={{ delay: 0.25 }}

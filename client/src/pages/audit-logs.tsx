@@ -1,7 +1,7 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { History, User, Filter, Download, Search } from "lucide-react";
+import { History, User, Filter, Download, Search, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -9,54 +9,102 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column } from "@/components/DataTable";
-import type { ActivityLog } from "@shared/types";
+import type { AuditLog } from "@shared/types";
+import { useAuditLogs } from "@/hooks/useData";
 
-const sampleLogs: ActivityLog[] = [
-  { id: "1", user_id: "1", action: "CREATE", entity_type: "cattle", entity_id: "101", details: { tag_number: "AW-010", name: "New Cow" }, created_at: "2024-01-30T10:30:00Z" },
-  { id: "2", user_id: "2", action: "UPDATE", entity_type: "production", entity_id: "201", details: { quantity: 12.5, session: "morning" }, created_at: "2024-01-30T09:15:00Z" },
-  { id: "3", user_id: "3", action: "CREATE", entity_type: "delivery", entity_id: "301", details: { customer: "Sharma Family", status: "delivered" }, created_at: "2024-01-30T08:45:00Z" },
-  { id: "4", user_id: "1", action: "UPDATE", entity_type: "invoice", entity_id: "401", details: { payment_received: 5000 }, created_at: "2024-01-30T08:00:00Z" },
-  { id: "5", user_id: "2", action: "DELETE", entity_type: "expense", entity_id: "501", details: { reason: "duplicate entry" }, created_at: "2024-01-29T16:30:00Z" },
-  { id: "6", user_id: "1", action: "LOGIN", entity_type: "auth", details: { ip_address: "192.168.1.1" }, created_at: "2024-01-29T06:00:00Z" },
-  { id: "7", user_id: "3", action: "CREATE", entity_type: "customer", entity_id: "601", details: { name: "New Customer" }, created_at: "2024-01-28T14:20:00Z" },
-  { id: "8", user_id: "2", action: "UPDATE", entity_type: "cattle", entity_id: "102", details: { lactation_status: "pregnant" }, created_at: "2024-01-28T11:10:00Z" },
-];
+// Extended type to include joined data
+interface AuditLogWithUser extends AuditLog {
+  userName?: string;
+}
 
-const userNames: Record<string, string> = { "1": "Admin User", "2": "Priya Sharma", "3": "Ramesh Kumar" };
-const actionColors: Record<string, string> = { CREATE: "bg-green-500/10 text-green-600", UPDATE: "bg-blue-500/10 text-blue-600", DELETE: "bg-red-500/10 text-red-600", LOGIN: "bg-purple-500/10 text-purple-600", LOGOUT: "bg-gray-500/10 text-gray-600" };
-const entityLabels: Record<string, string> = { cattle: "Cattle", production: "Production", delivery: "Delivery", invoice: "Invoice", expense: "Expense", customer: "Customer", auth: "Authentication", employee: "Employee", health: "Health Record", breeding: "Breeding" };
+const actionColors: Record<string, string> = {
+  CREATE: "bg-green-500/10 text-green-600",
+  UPDATE: "bg-blue-500/10 text-blue-600",
+  DELETE: "bg-red-500/10 text-red-600",
+  LOGIN: "bg-purple-500/10 text-purple-600",
+  LOGOUT: "bg-gray-500/10 text-gray-600"
+};
+
+const entityLabels: Record<string, string> = {
+  cattle: "Cattle",
+  production: "Production",
+  delivery: "Delivery",
+  invoice: "Invoice",
+  expense: "Expense",
+  customer: "Customer",
+  auth: "Authentication",
+  employee: "Employee",
+  health: "Health Record",
+  breeding: "Breeding",
+  bottles: "Bottles",
+  inventory: "Inventory"
+};
 
 export default function AuditLogsPage() {
-  const [logs] = useState<ActivityLog[]>(sampleLogs);
+  const { data: logsData, isLoading } = useAuditLogs();
+
   const [filterAction, setFilterAction] = useState<string>("all");
   const [filterEntity, setFilterEntity] = useState<string>("all");
   const [searchTerm, setSearchTerm] = useState("");
 
-  const filteredLogs = logs.filter(log => {
-    const matchesAction = filterAction === "all" || log.action === filterAction;
-    const matchesEntity = filterEntity === "all" || log.entity_type === filterEntity;
-    const matchesSearch = !searchTerm || JSON.stringify(log).toLowerCase().includes(searchTerm.toLowerCase());
-    return matchesAction && matchesEntity && matchesSearch;
-  });
+  const logs = (logsData || []) as AuditLogWithUser[];
 
-  const stats = { total: logs.length, creates: logs.filter(l => l.action === "CREATE").length, updates: logs.filter(l => l.action === "UPDATE").length, deletes: logs.filter(l => l.action === "DELETE").length };
+  const filteredLogs = useMemo(() => {
+    return logs.filter(log => {
+      const matchesAction = filterAction === "all" || log.action === filterAction;
+      const matchesEntity = filterEntity === "all" || log.entity_type === filterEntity;
 
-  const columns: Column<ActivityLog>[] = [
-    { key: "created_at", header: "Timestamp", sortable: true, render: (item) => (
-      <div><span className="font-mono text-sm">{format(new Date(item.created_at), "dd MMM yyyy")}</span><p className="text-xs text-muted-foreground">{format(new Date(item.created_at), "hh:mm:ss a")}</p></div>
-    ) },
-    { key: "user_id", header: "User", render: (item) => (
-      <div className="flex items-center gap-2"><User className="h-4 w-4 text-muted-foreground" /><span className="font-medium">{userNames[item.user_id || ""] || "System"}</span></div>
-    ) },
+      // Search in details or user name or entity ID
+      const searchLower = searchTerm.toLowerCase();
+      const detailsString = log.details ? JSON.stringify(log.details).toLowerCase() : "";
+      const matchesSearch = !searchTerm ||
+        detailsString.includes(searchLower) ||
+        (log.userName && log.userName.toLowerCase().includes(searchLower)) ||
+        (log.entity_id && log.entity_id.includes(searchTerm));
+
+      return matchesAction && matchesEntity && matchesSearch;
+    });
+  }, [logs, filterAction, filterEntity, searchTerm]);
+
+  const stats = useMemo(() => ({
+    total: logs.length,
+    creates: logs.filter(l => l.action === "CREATE").length,
+    updates: logs.filter(l => l.action === "UPDATE").length,
+    deletes: logs.filter(l => l.action === "DELETE").length
+  }), [logs]);
+
+  const columns: Column<AuditLogWithUser>[] = [
+    {
+      key: "created_at", header: "Timestamp", sortable: true, render: (item) => (
+        <div>
+          <span className="font-mono text-sm">{format(new Date(item.created_at), "dd MMM yyyy")}</span>
+          <p className="text-xs text-muted-foreground">{format(new Date(item.created_at), "hh:mm:ss a")}</p>
+        </div>
+      )
+    },
+    {
+      key: "user_id", header: "User", render: (item) => (
+        <div className="flex items-center gap-2">
+          <User className="h-4 w-4 text-muted-foreground" />
+          <span className="font-medium">{item.userName || "System"}</span>
+        </div>
+      )
+    },
     { key: "action", header: "Action", render: (item) => <Badge variant="secondary" className={actionColors[item.action] || ""}>{item.action}</Badge> },
     { key: "entity_type", header: "Entity", render: (item) => <Badge variant="outline">{entityLabels[item.entity_type] || item.entity_type}</Badge> },
-    { key: "details", header: "Details", render: (item) => (
-      <div className="max-w-[300px]">
-        {item.entity_id && <span className="text-xs text-muted-foreground mr-2">ID: {item.entity_id}</span>}
-        {item.details && <span className="text-sm truncate">{JSON.stringify(item.details).slice(0, 50)}...</span>}
-      </div>
-    ) },
+    {
+      key: "details", header: "Details", render: (item) => (
+        <div className="max-w-[300px]">
+          {item.entity_id && <span className="text-xs text-muted-foreground mr-2">ID: {item.entity_id}</span>}
+          {item.details && <span className="text-sm truncate block">{JSON.stringify(item.details).slice(0, 50)}...</span>}
+        </div>
+      )
+    },
   ];
+
+  if (isLoading) {
+    return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="p-6 space-y-6">

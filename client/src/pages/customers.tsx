@@ -43,7 +43,7 @@ export default function CustomersPage() {
   const addCustomerMutation = useAddCustomer();
   const updateCustomerMutation = useUpdateCustomer();
   const deleteCustomerMutation = useDeleteCustomer();
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedCustomer, setSelectedCustomer] = useState<CustomerWithBalance | null>(null);
@@ -71,7 +71,7 @@ export default function CustomersPage() {
       const totalBilled = customerInvoices.reduce((sum, inv) => sum + (inv.final_amount || 0), 0);
       const totalPaid = customerInvoices.reduce((sum, inv) => sum + (inv.paid_amount || 0), 0);
       const calculatedCredit = totalBilled - totalPaid;
-      
+
       return {
         ...customer,
         calculatedCredit,
@@ -228,7 +228,8 @@ export default function CustomersPage() {
       email: formData.email || undefined,
       address: formData.address || undefined,
       area: formData.area || undefined,
-      customer_type: formData.subscription_type,
+      subscription_type: formData.subscription_type,
+      billing_cycle: formData.billing_cycle,
       notes: formData.notes || undefined,
     };
 

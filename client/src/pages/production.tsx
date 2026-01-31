@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { format } from "date-fns";
-import { Plus, Sun, Moon, Calendar, TrendingUp, Download, Filter, AlertCircle } from "lucide-react";
-import { useCattle } from "@/hooks/useData";
+import { format, subDays, isSameDay, parseISO } from "date-fns";
+import { Plus, Sun, Moon, Calendar, TrendingUp, Download, AlertCircle, Loader2 } from "lucide-react";
+import { useCattle, useProduction, useAddProduction } from "@/hooks/useData";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -25,7 +25,7 @@ import {
 } from "@/components/ui/select";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PageHeader } from "@/components/PageHeader";
-import { DataTable, Column, Action } from "@/components/DataTable";
+import { DataTable, Column } from "@/components/DataTable";
 import { useToast } from "@/hooks/use-toast";
 import {
   AreaChart,
@@ -38,37 +38,22 @@ import {
 } from "recharts";
 import type { MilkProduction, SessionType } from "@shared/types";
 
-// Sample production data - only for lactating female cattle (IDs: 1=Lakshmi, 2=Ganga, 5=Saraswati, 8=Parvati)
-const sampleProduction: MilkProduction[] = [
-  { id: "1", cattle_id: "1", production_date: "2024-01-30", session: "morning", quantity_liters: 12.5, fat_percentage: 4.2, snf_percentage: 8.5, created_at: "2024-01-30" },
-  { id: "2", cattle_id: "1", production_date: "2024-01-30", session: "evening", quantity_liters: 10.0, fat_percentage: 4.0, snf_percentage: 8.3, created_at: "2024-01-30" },
-  { id: "3", cattle_id: "2", production_date: "2024-01-30", session: "morning", quantity_liters: 14.0, fat_percentage: 4.5, snf_percentage: 8.8, created_at: "2024-01-30" },
-  { id: "4", cattle_id: "5", production_date: "2024-01-30", session: "morning", quantity_liters: 11.0, fat_percentage: 4.3, snf_percentage: 8.6, created_at: "2024-01-30" },
-  { id: "5", cattle_id: "8", production_date: "2024-01-30", session: "evening", quantity_liters: 9.5, fat_percentage: 4.1, snf_percentage: 8.4, created_at: "2024-01-30" },
-];
-
-const chartData = [
-  { date: "24 Jan", total: 420 },
-  { date: "25 Jan", total: 445 },
-  { date: "26 Jan", total: 438 },
-  { date: "27 Jan", total: 462 },
-  { date: "28 Jan", total: 455 },
-  { date: "29 Jan", total: 478 },
-  { date: "30 Jan", total: 485 },
-];
-
 export default function ProductionPage() {
-  const { data: cattleData } = useCattle();
-  const [production, setProduction] = useState<MilkProduction[]>(sampleProduction);
+  const { data: cattleData, isLoading: isCattleLoading } = useCattle();
+  const { data: productionData, isLoading: isProductionLoading } = useProduction();
+  const addProductionMutation = useAddProduction();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [selectedSession, setSelectedSession] = useState<SessionType>("morning");
   const { toast } = useToast();
 
+  const production = productionData || [];
+
   // Filter cattle to only show lactating females (intelligent milk production eligibility)
   const eligibleCattle = useMemo(() => {
     if (!cattleData) return [];
-    return cattleData.filter(cattle => 
+    return cattleData.filter(cattle =>
       cattle.gender === 'female' && cattle.lactation_status === 'lactating'
     );
   }, [cattleData]);
@@ -104,8 +89,27 @@ export default function ProductionPage() {
   const avgFat =
     todayProduction.length > 0
       ? todayProduction.reduce((sum, p) => sum + (p.fat_percentage || 0), 0) /
-        todayProduction.length
+      todayProduction.length
       : 0;
+
+  // Dynamic Chart Data - Last 7 Days
+  const chartData = useMemo(() => {
+    const last7Days = Array.from({ length: 7 }, (_, i) => {
+      const d = subDays(new Date(), 6 - i);
+      return {
+        date: format(d, "dd MMM"),
+        fullDate: format(d, "yyyy-MM-dd"),
+        total: 0
+      };
+    });
+
+    return last7Days.map(day => {
+      const dayTotal = production
+        .filter(p => p.production_date === day.fullDate)
+        .reduce((sum, p) => sum + p.quantity_liters, 0);
+      return { ...day, total: dayTotal };
+    });
+  }, [production]);
 
   const columns: Column<MilkProduction>[] = [
     {
@@ -176,8 +180,7 @@ export default function ProductionPage() {
       return;
     }
 
-    const newRecord: MilkProduction = {
-      id: Date.now().toString(),
+    const payload = {
       cattle_id: formData.cattle_id,
       production_date: selectedDate,
       session: selectedSession,
@@ -185,24 +188,43 @@ export default function ProductionPage() {
       fat_percentage: formData.fat_percentage ? parseFloat(formData.fat_percentage) : undefined,
       snf_percentage: formData.snf_percentage ? parseFloat(formData.snf_percentage) : undefined,
       quality_notes: formData.quality_notes || undefined,
-      created_at: new Date().toISOString(),
     };
 
-    setProduction((prev) => [...prev, newRecord]);
-    toast({
-      title: "Production Recorded",
-      description: `${formData.quantity_liters}L recorded for ${selectedSession} session`,
+    addProductionMutation.mutate(payload, {
+      onSuccess: () => {
+        toast({
+          title: "Production Recorded",
+          description: `${formData.quantity_liters}L recorded for ${selectedSession} session`,
+        });
+        setFormData({
+          cattle_id: "",
+          quantity_liters: "",
+          fat_percentage: "",
+          snf_percentage: "",
+          quality_notes: "",
+        });
+        setIsDialogOpen(false);
+      },
+      onError: (error) => {
+        toast({
+          title: "Error Recording Production",
+          description: error.message,
+          variant: "destructive",
+        });
+      }
     });
-
-    setFormData({
-      cattle_id: "",
-      quantity_liters: "",
-      fat_percentage: "",
-      snf_percentage: "",
-      quality_notes: "",
-    });
-    setIsDialogOpen(false);
   };
+
+  const isLoading = isCattleLoading || isProductionLoading;
+  const isSaving = addProductionMutation.isPending;
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
 
   return (
     <div className="p-4 md:p-6 space-y-4 md:space-y-6">
@@ -308,11 +330,6 @@ export default function ProductionPage() {
           <CardHeader className="p-4 md:pb-2">
             <div className="flex items-center justify-between gap-2">
               <CardTitle className="text-base md:text-lg">Production Trend</CardTitle>
-              <div className="flex items-center gap-1 text-xs md:text-sm text-green-600">
-                <TrendingUp className="h-3 w-3 md:h-4 md:w-4" />
-                <span className="hidden sm:inline">+8.2% from last week</span>
-                <span className="sm:hidden">+8.2%</span>
-              </div>
             </div>
           </CardHeader>
           <CardContent className="p-4 pt-0">
@@ -381,8 +398,8 @@ export default function ProductionPage() {
             <div className="flex items-start gap-2 p-3 rounded-lg bg-muted/50 border text-sm" data-testid="info-eligible-cattle">
               <AlertCircle className="h-4 w-4 mt-0.5 text-primary shrink-0" />
               <p className="text-muted-foreground">
-                Only <span className="font-medium text-foreground">lactating female</span> cattle can produce milk. 
-                {eligibleCattle.length > 0 
+                Only <span className="font-medium text-foreground">lactating female</span> cattle can produce milk.
+                {eligibleCattle.length > 0
                   ? ` ${eligibleCattle.length} eligible cattle available.`
                   : ' No eligible cattle found.'}
               </p>
@@ -476,14 +493,15 @@ export default function ProductionPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={() => setIsDialogOpen(false)}>
+            <Button variant="outline" onClick={() => setIsDialogOpen(false)} disabled={isSaving}>
               Cancel
             </Button>
-            <Button 
-              onClick={handleSubmit} 
-              disabled={eligibleCattle.length === 0}
+            <Button
+              onClick={handleSubmit}
+              disabled={eligibleCattle.length === 0 || isSaving}
               data-testid="button-submit-production"
             >
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               Record Production
             </Button>
           </DialogFooter>

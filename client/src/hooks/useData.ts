@@ -4,9 +4,10 @@ import {
   fetchCattle, fetchProduction, fetchCustomers, fetchProducts,
   fetchRoutes, fetchDeliveries, fetchInvoices, fetchExpenses,
   fetchEmployees, fetchInventory, fetchEquipment, fetchHealthRecords,
-  fetchBreedingRecords, fetchVendors, fetchVendorPayments, fetchProcurement, getDashboardStats
+  fetchBreedingRecords, fetchVendors, fetchVendorPayments, fetchProcurement, getDashboardStats,
+  fetchBottles, fetchBottleTransactions, fetchAuditLogs
 } from '@/lib/api';
-import type { Cattle, Customer, Product, MilkProduction, Delivery, Invoice, HealthRecord, BreedingRecord, MilkVendor, VendorPayment, MilkProcurement } from '@shared/types';
+import type { Cattle, Customer, Product, MilkProduction, Delivery, Invoice, HealthRecord, BreedingRecord, MilkVendor, VendorPayment, MilkProcurement, FeedInventory, Equipment, Employee, Bottle, BottleTransaction, Route } from '@shared/types';
 
 export function useCattle() {
   return useQuery({
@@ -42,6 +43,45 @@ export function useProducts() {
     queryKey: ['products'],
     queryFn: fetchProducts,
     staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAddProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (product: Partial<Product>) => {
+      return api.products.create(product);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+}
+
+export function useUpdateProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Product> & { id: string }) => {
+      return api.products.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
+  });
+}
+
+export function useDeleteProduct() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.products.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['products'] });
+    },
   });
 }
 
@@ -85,6 +125,50 @@ export function useEmployees() {
   });
 }
 
+export function useAddEmployee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (employee: Partial<Employee>) => {
+      // The API expects 'employees' table insertion, handled by api.employees.create
+      // Note: This does NOT create a user login profile, only an employee record.
+      return api.employees.create(employee);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useUpdateEmployee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Employee> & { id: string }) => {
+      return api.employees.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useDeleteEmployee() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.employees.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['employees'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
 export function useInventory() {
   return useQuery({
     queryKey: ['inventory'],
@@ -93,11 +177,95 @@ export function useInventory() {
   });
 }
 
+export function useAddInventory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (item: Partial<FeedInventory>) => {
+      return api.inventory.create(item);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useUpdateInventory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<FeedInventory> & { id: string }) => {
+      return api.inventory.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useDeleteInventory() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.inventory.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['inventory'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
 export function useEquipment() {
   return useQuery({
     queryKey: ['equipment'],
     queryFn: fetchEquipment,
     staleTime: 10 * 60 * 1000,
+  });
+}
+
+export function useAddEquipment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (item: Partial<Equipment>) => {
+      return api.equipment.create(item);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useUpdateEquipment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Equipment> & { id: string }) => {
+      return api.equipment.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
+  });
+}
+
+export function useDeleteEquipment() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.equipment.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['equipment'] });
+      queryClient.invalidateQueries({ queryKey: ['dashboard-stats'] });
+    },
   });
 }
 
@@ -127,7 +295,7 @@ export function useDashboardStats() {
 
 export function useAddCattle() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (cattle: Partial<Cattle>) => {
       return api.cattle.create(cattle);
@@ -141,7 +309,7 @@ export function useAddCattle() {
 
 export function useUpdateCattle() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Cattle> & { id: string }) => {
       return api.cattle.update(id, updates);
@@ -155,7 +323,7 @@ export function useUpdateCattle() {
 
 export function useDeleteCattle() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       return api.cattle.delete(id);
@@ -169,7 +337,7 @@ export function useDeleteCattle() {
 
 export function useAddProduction() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (production: Partial<MilkProduction>) => {
       return api.production.create(production);
@@ -183,7 +351,7 @@ export function useAddProduction() {
 
 export function useAddCustomer() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (customer: Partial<Customer>) => {
       return api.customers.create(customer);
@@ -197,7 +365,7 @@ export function useAddCustomer() {
 
 export function useUpdateCustomer() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Customer> & { id: string }) => {
       return api.customers.update(id, updates);
@@ -211,7 +379,7 @@ export function useUpdateCustomer() {
 
 export function useDeleteCustomer() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       return api.customers.delete(id);
@@ -225,7 +393,7 @@ export function useDeleteCustomer() {
 
 export function useAddDelivery() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (delivery: Partial<Delivery>) => {
       return api.deliveries.create(delivery);
@@ -239,7 +407,7 @@ export function useAddDelivery() {
 
 export function useUpdateDelivery() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<Delivery> & { id: string }) => {
       return api.deliveries.update(id, updates);
@@ -253,7 +421,7 @@ export function useUpdateDelivery() {
 
 export function useAddInvoice() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (invoice: Partial<Invoice>) => {
       return api.invoices.create(invoice);
@@ -267,7 +435,7 @@ export function useAddInvoice() {
 
 export function useUpdateInvoice() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: { id: string } & Partial<Invoice>) => {
       return api.invoices.update(id, updates);
@@ -282,7 +450,7 @@ export function useUpdateInvoice() {
 
 export function useAddHealthRecord() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (record: Partial<HealthRecord>) => {
       return api.health.create(record);
@@ -293,9 +461,35 @@ export function useAddHealthRecord() {
   });
 }
 
+export function useUpdateHealthRecord() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<HealthRecord> & { id: string }) => {
+      return api.health.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health'] });
+    },
+  });
+}
+
+export function useDeleteHealthRecord() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.health.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['health'] });
+    },
+  });
+}
+
 export function useAddBreedingRecord() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (record: Partial<BreedingRecord>) => {
       return api.breeding.create(record);
@@ -306,9 +500,35 @@ export function useAddBreedingRecord() {
   });
 }
 
+export function useUpdateBreedingRecord() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<BreedingRecord> & { id: string }) => {
+      return api.breeding.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['breeding'] });
+    },
+  });
+}
+
+export function useDeleteBreedingRecord() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.breeding.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['breeding'] });
+    },
+  });
+}
+
 export function useAddExpense() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (expense: { category: string; title: string; amount: number; expense_date: string; notes?: string }) => {
       return api.expenses.create(expense);
@@ -340,7 +560,7 @@ export function useVendors() {
 
 export function useAddVendor() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (vendor: Omit<MilkVendor, 'id' | 'created_at'>) => {
       return api.vendors.create(vendor);
@@ -353,7 +573,7 @@ export function useAddVendor() {
 
 export function useUpdateVendor() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<MilkVendor> & { id: string }) => {
       return api.vendors.update(id, updates);
@@ -366,7 +586,7 @@ export function useUpdateVendor() {
 
 export function useDeleteVendor() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       return api.vendors.delete(id);
@@ -387,7 +607,7 @@ export function useVendorPayments() {
 
 export function useAddVendorPayment() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (payment: Omit<VendorPayment, 'id' | 'created_at'>) => {
       return api.vendorPayments.create(payment);
@@ -402,7 +622,7 @@ export function useAddVendorPayment() {
 
 export function useAddBulkVendorPayments() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (payments: Array<Omit<VendorPayment, 'id' | 'created_at'>>) => {
       return api.vendorPayments.createBulk(payments);
@@ -425,7 +645,7 @@ export function useProcurement() {
 
 export function useAddProcurement() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (item: Omit<MilkProcurement, 'id' | 'created_at'>) => {
       return api.procurement.create(item);
@@ -439,7 +659,7 @@ export function useAddProcurement() {
 
 export function useUpdateProcurement() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async ({ id, ...updates }: Partial<MilkProcurement> & { id: string }) => {
       return api.procurement.update(id, updates);
@@ -453,7 +673,7 @@ export function useUpdateProcurement() {
 
 export function useDeleteProcurement() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
     mutationFn: async (id: string) => {
       return api.procurement.delete(id);
@@ -461,6 +681,122 @@ export function useDeleteProcurement() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['procurement'] });
       queryClient.invalidateQueries({ queryKey: ['vendors'] });
+    },
+  });
+}
+
+export function useBottles() {
+  return useQuery({
+    queryKey: ['bottles'],
+    queryFn: fetchBottles,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAddBottle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (bottle: Partial<Bottle>) => {
+      return api.bottles.create(bottle);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bottles'] });
+    },
+  });
+}
+
+export function useUpdateBottle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Bottle> & { id: string }) => {
+      return api.bottles.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bottles'] });
+    },
+  });
+}
+
+export function useDeleteBottle() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.bottles.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bottles'] });
+    },
+  });
+}
+
+export function useBottleTransactions() {
+  return useQuery({
+    queryKey: ['bottleTransactions'],
+    queryFn: fetchBottleTransactions,
+    staleTime: 5 * 60 * 1000,
+  });
+}
+
+export function useAddBottleTransaction() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (transaction: Partial<BottleTransaction>) => {
+      return api.bottleTransactions.create(transaction);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['bottleTransactions'] });
+      queryClient.invalidateQueries({ queryKey: ['bottles'] });
+    },
+  });
+}
+
+export function useAuditLogs() {
+  return useQuery({
+    queryKey: ['auditLogs'],
+    queryFn: fetchAuditLogs,
+    staleTime: 60 * 1000,
+  });
+}
+
+export function useAddRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (route: Partial<Route>) => {
+      return api.routes.create(route);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routes'] });
+    },
+  });
+}
+
+export function useUpdateRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async ({ id, ...updates }: Partial<Route> & { id: string }) => {
+      return api.routes.update(id, updates);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routes'] });
+    },
+  });
+}
+
+export function useDeleteRoute() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: async (id: string) => {
+      return api.routes.delete(id);
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['routes'] });
     },
   });
 }

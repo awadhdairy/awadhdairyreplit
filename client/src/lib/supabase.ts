@@ -50,7 +50,7 @@ export const api = {
   auth: {
     login: async (phone: string, pin: string) => {
       const pinHash = await hashPin(pin);
-      
+
       const { data: user, error: userError } = await supabase
         .from('profiles')
         .select('*')
@@ -58,7 +58,7 @@ export const api = {
         .eq('pin_hash', pinHash)
         .eq('is_active', true)
         .single();
-      
+
       if (userError || !user) {
         throw new Error('Invalid phone number or PIN');
       }
@@ -114,7 +114,7 @@ export const api = {
         .from('user_sessions')
         .delete()
         .eq('session_token', sessionToken);
-      
+
       return { success: true };
     }
   },
@@ -236,7 +236,7 @@ export const api = {
 
   deliveries: {
     getAll: async () => {
-      const { data, error } = await supabase.from('deliveries').select('*, customers(name), routes(name)').order('delivery_date', { ascending: false });
+      const { data, error } = await supabase.from('deliveries').select('*, customers(name), routes(name), delivery_items(*, products(name))').order('delivery_date', { ascending: false });
       if (error) throw new Error(error.message);
       return data;
     },
@@ -333,6 +333,29 @@ export const api = {
     },
     delete: async (id: string) => {
       const { error } = await supabase.from('payments').delete().eq('id', id);
+      if (error) throw new Error(error.message);
+      return { success: true };
+    }
+  },
+
+  bottles: {
+    getAll: async () => {
+      const { data, error } = await supabase.from('bottles').select('*').order('created_at', { ascending: false });
+      if (error) throw new Error(error.message);
+      return data;
+    },
+    create: async (data: any) => {
+      const { data: result, error } = await supabase.from('bottles').insert(data).select().single();
+      if (error) throw new Error(error.message);
+      return result;
+    },
+    update: async (id: string, data: any) => {
+      const { data: result, error } = await supabase.from('bottles').update(data).eq('id', id).select().single();
+      if (error) throw new Error(error.message);
+      return result;
+    },
+    delete: async (id: string) => {
+      const { error } = await supabase.from('bottles').delete().eq('id', id);
       if (error) throw new Error(error.message);
       return { success: true };
     }

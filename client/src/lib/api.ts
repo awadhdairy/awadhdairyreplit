@@ -1,8 +1,9 @@
 import { api, getStoredSession } from './supabase';
-import type { 
-  Cattle, MilkProduction, Customer, Product, Delivery, Invoice, 
+import type {
+  Cattle, MilkProduction, Customer, Product, Delivery, Invoice,
   Employee, Expense, HealthRecord, BreedingRecord, InventoryItem,
-  Equipment, Route, MilkVendor, VendorPayment, MilkProcurement
+  Equipment, Route, MilkVendor, VendorPayment, MilkProcurement,
+  Bottle, BottleTransaction, AuditLog
 } from '@shared/types';
 
 export const isDemo = () => false;
@@ -138,6 +139,32 @@ export async function fetchProcurement(): Promise<MilkProcurement[]> {
   }));
 }
 
+export async function fetchBottles(): Promise<Bottle[]> {
+  const data = await api.bottles.getAll();
+  return data.map((b: any) => ({
+    ...b,
+    total_quantity: b.total_quantity ? parseFloat(b.total_quantity) : 0,
+    available_quantity: b.available_quantity ? parseFloat(b.available_quantity) : 0,
+    deposit_amount: b.deposit_amount ? parseFloat(b.deposit_amount) : 0,
+  }));
+}
+
+export async function fetchBottleTransactions(): Promise<BottleTransaction[]> {
+  const data = await api.bottleTransactions.getAll();
+  return data.map((t: any) => ({
+    ...t,
+    quantity: t.quantity ? parseFloat(t.quantity) : 0,
+  }));
+}
+
+export async function fetchAuditLogs(): Promise<AuditLog[]> {
+  const data = await api.auditLogs.getAll();
+  return data.map((l: any) => ({
+    ...l,
+    userName: l.profiles?.full_name || 'System', // Map profile name if available
+  }));
+}
+
 export async function getDashboardStats() {
   const [cattle, production, customers, deliveries, invoices, inventory, expenses] = await Promise.all([
     fetchCattle(),
@@ -153,7 +180,7 @@ export async function getDashboardStats() {
   const todayProduction = production.filter(p => p.production_date === today);
   const totalMilk = todayProduction.reduce((sum, p) => sum + (p.quantity_liters || 0), 0);
   const activeCattle = cattle.filter(c => c.status === 'active' && c.lactation_status === 'lactating').length;
-  
+
   return {
     todayProduction: totalMilk,
     activeCattle,
@@ -166,8 +193,8 @@ export async function getDashboardStats() {
     outstandingAmount: customers.reduce((sum, c) => sum + (c.credit_balance || 0), 0),
     lowStockItems: inventory.filter(i => i.quantity <= i.min_stock_level).length,
     pendingExpenses: expenses.length,
-    avgFatContent: todayProduction.length > 0 
-      ? todayProduction.reduce((sum, p) => sum + (p.fat_percentage || 0), 0) / todayProduction.length 
+    avgFatContent: todayProduction.length > 0
+      ? todayProduction.reduce((sum, p) => sum + (p.fat_percentage || 0), 0) / todayProduction.length
       : 0,
   };
 }

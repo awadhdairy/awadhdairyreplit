@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Eye, Edit, Trash2, Phone, Calendar, IndianRupee, UserCog, Download } from "lucide-react";
+import { Plus, Eye, Edit, Trash2, Phone, Calendar, IndianRupee, UserCog, Download, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -28,14 +28,7 @@ import { DataTable, Column, Action } from "@/components/DataTable";
 import { useToast } from "@/hooks/use-toast";
 import type { Employee, UserRole } from "@shared/types";
 import { format } from "date-fns";
-
-const sampleEmployees: Employee[] = [
-  { id: "1", name: "Ramesh Kumar", phone: "9876543210", role: "farm_worker", salary: 18000, joining_date: "2022-03-15", is_active: true, address: "Village Rampur", created_at: "2022-03-15" },
-  { id: "2", name: "Suresh Singh", phone: "9876543211", role: "delivery_staff", salary: 15000, joining_date: "2023-01-10", is_active: true, address: "Sector 5, City", created_at: "2023-01-10" },
-  { id: "3", name: "Priya Sharma", phone: "9876543212", role: "accountant", salary: 25000, joining_date: "2021-06-01", is_active: true, address: "Model Town", created_at: "2021-06-01" },
-  { id: "4", name: "Dr. Anil Verma", phone: "9876543213", role: "vet_staff", salary: 35000, joining_date: "2020-08-20", is_active: true, address: "Civil Lines", created_at: "2020-08-20" },
-  { id: "5", name: "Mohan Lal", phone: "9876543214", role: "farm_worker", salary: 16000, joining_date: "2023-06-15", is_active: false, address: "Village Sundar", created_at: "2023-06-15" },
-];
+import { useEmployees, useAddEmployee, useUpdateEmployee, useDeleteEmployee } from "@/hooks/useData";
 
 const roleLabels: Record<UserRole, string> = {
   super_admin: "Super Admin",
@@ -58,7 +51,11 @@ const roleColors: Record<UserRole, string> = {
 };
 
 export default function EmployeesPage() {
-  const [employees, setEmployees] = useState<Employee[]>(sampleEmployees);
+  const { data: employeesData, isLoading } = useEmployees();
+  const addMutation = useAddEmployee();
+  const updateMutation = useUpdateEmployee();
+  const deleteMutation = useDeleteEmployee();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<Employee | null>(null);
   const { toast } = useToast();
@@ -72,6 +69,8 @@ export default function EmployeesPage() {
     address: "",
     is_active: true,
   });
+
+  const employees = employeesData || [];
 
   const stats = {
     total: employees.length,
@@ -156,8 +155,10 @@ export default function EmployeesPage() {
     {
       label: "Delete",
       onClick: (item) => {
-        setEmployees((prev) => prev.filter((e) => e.id !== item.id));
-        toast({ title: "Employee Deleted", description: `${item.name} has been removed` });
+        deleteMutation.mutate(item.id, {
+          onSuccess: () => toast({ title: "Employee Deleted", description: `${item.name} has been removed` }),
+          onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+        });
       },
       icon: Trash2,
       variant: "destructive",
@@ -170,27 +171,23 @@ export default function EmployeesPage() {
       return;
     }
 
-    if (selectedEmployee) {
-      setEmployees((prev) =>
-        prev.map((e) =>
-          e.id === selectedEmployee.id
-            ? { ...e, ...formData, salary: formData.salary ? parseFloat(formData.salary) : undefined }
-            : e
-        )
-      );
-      toast({ title: "Employee Updated", description: `${formData.name} has been updated` });
-    } else {
-      const newEmployee: Employee = {
-        id: Date.now().toString(),
-        ...formData,
-        salary: formData.salary ? parseFloat(formData.salary) : undefined,
-        created_at: new Date().toISOString(),
-      };
-      setEmployees((prev) => [...prev, newEmployee]);
-      toast({ title: "Employee Added", description: `${formData.name} has been added` });
-    }
+    const payload = {
+      ...formData,
+      salary: formData.salary ? parseFloat(formData.salary) : undefined,
+      joining_date: formData.joining_date || undefined, // Sanitize empty string
+    };
 
-    resetForm();
+    if (selectedEmployee) {
+      updateMutation.mutate({ id: selectedEmployee.id, ...payload }, {
+        onSuccess: () => { toast({ title: "Employee Updated" }); resetForm(); },
+        onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+      });
+    } else {
+      addMutation.mutate(payload, {
+        onSuccess: () => { toast({ title: "Employee Added" }); resetForm(); },
+        onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" }),
+      });
+    }
   };
 
   const resetForm = () => {
@@ -198,6 +195,12 @@ export default function EmployeesPage() {
     setSelectedEmployee(null);
     setIsDialogOpen(false);
   };
+
+  const isSaving = addMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+
+  if (isLoading) {
+    return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -291,8 +294,8 @@ export default function EmployeesPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>Cancel</Button>
-            <Button onClick={handleSubmit} data-testid="button-submit-employee">{selectedEmployee ? "Update" : "Add"} Employee</Button>
+            <Button variant="outline" onClick={resetForm} disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSubmit} disabled={isSaving} data-testid="button-submit-employee">{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{selectedEmployee ? "Update" : "Add"} Employee</Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>

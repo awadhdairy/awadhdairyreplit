@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Edit, Trash2, Package, Download, IndianRupee } from "lucide-react";
+import { Plus, Edit, Trash2, Package, Download, IndianRupee, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -27,21 +27,16 @@ import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column, Action } from "@/components/DataTable";
 import { useToast } from "@/hooks/use-toast";
 import type { Product } from "@shared/types";
-
-const sampleProducts: Product[] = [
-  { id: "1", name: "Full Cream Milk", description: "Fresh cow milk with full cream", base_price: 65, unit: "liter", tax_percentage: 0, is_active: true, created_at: "2024-01-01" },
-  { id: "2", name: "Toned Milk", description: "Low fat toned milk", base_price: 55, unit: "liter", tax_percentage: 0, is_active: true, created_at: "2024-01-01" },
-  { id: "3", name: "Buffalo Milk", description: "Rich buffalo milk", base_price: 80, unit: "liter", tax_percentage: 0, is_active: true, created_at: "2024-01-01" },
-  { id: "4", name: "Paneer", description: "Fresh cottage cheese", base_price: 350, unit: "kg", tax_percentage: 5, is_active: true, created_at: "2024-01-01" },
-  { id: "5", name: "Dahi (Curd)", description: "Fresh homemade curd", base_price: 60, unit: "kg", tax_percentage: 0, is_active: true, created_at: "2024-01-01" },
-  { id: "6", name: "Ghee", description: "Pure desi ghee", base_price: 600, unit: "kg", tax_percentage: 5, is_active: true, created_at: "2024-01-01" },
-  { id: "7", name: "Buttermilk", description: "Fresh chaas/lassi", base_price: 30, unit: "liter", tax_percentage: 0, is_active: false, created_at: "2024-01-01" },
-];
+import { useProducts, useAddProduct, useUpdateProduct, useDeleteProduct } from "@/hooks/useData";
 
 const units = ["liter", "kg", "piece", "gram", "ml"];
 
 export default function ProductsPage() {
-  const [products, setProducts] = useState<Product[]>(sampleProducts);
+  const { data: productsData, isLoading } = useProducts();
+  const addProductMutation = useAddProduct();
+  const updateProductMutation = useUpdateProduct();
+  const deleteProductMutation = useDeleteProduct();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState<Product | null>(null);
   const { toast } = useToast();
@@ -54,6 +49,8 @@ export default function ProductsPage() {
     tax_percentage: "0",
     is_active: true,
   });
+
+  const products = productsData || [];
 
   const stats = {
     total: products.length,
@@ -127,10 +124,20 @@ export default function ProductsPage() {
     {
       label: "Delete",
       onClick: (item) => {
-        setProducts((prev) => prev.filter((p) => p.id !== item.id));
-        toast({
-          title: "Product Deleted",
-          description: `${item.name} has been removed`,
+        deleteProductMutation.mutate(item.id, {
+          onSuccess: () => {
+            toast({
+              title: "Product Deleted",
+              description: `${item.name} has been removed`,
+            });
+          },
+          onError: (error) => {
+            toast({
+              title: "Error Deleting Product",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
         });
       },
       icon: Trash2,
@@ -148,42 +155,53 @@ export default function ProductsPage() {
       return;
     }
 
+    const payload = {
+      name: formData.name,
+      description: formData.description || undefined,
+      base_price: parseFloat(formData.base_price),
+      unit: formData.unit,
+      tax_percentage: parseFloat(formData.tax_percentage),
+      is_active: formData.is_active,
+    };
+
     if (selectedProduct) {
-      setProducts((prev) =>
-        prev.map((p) =>
-          p.id === selectedProduct.id
-            ? {
-                ...p,
-                ...formData,
-                base_price: parseFloat(formData.base_price),
-                tax_percentage: parseFloat(formData.tax_percentage),
-              }
-            : p
-        )
+      updateProductMutation.mutate(
+        { id: selectedProduct.id, ...payload },
+        {
+          onSuccess: () => {
+            toast({
+              title: "Product Updated",
+              description: `${formData.name} has been updated`,
+            });
+            resetForm();
+          },
+          onError: (error) => {
+            toast({
+              title: "Error Updating Product",
+              description: error.message,
+              variant: "destructive",
+            });
+          }
+        }
       );
-      toast({
-        title: "Product Updated",
-        description: `${formData.name} has been updated`,
-      });
     } else {
-      const newProduct: Product = {
-        id: Date.now().toString(),
-        name: formData.name,
-        description: formData.description || undefined,
-        base_price: parseFloat(formData.base_price),
-        unit: formData.unit,
-        tax_percentage: parseFloat(formData.tax_percentage),
-        is_active: formData.is_active,
-        created_at: new Date().toISOString(),
-      };
-      setProducts((prev) => [...prev, newProduct]);
-      toast({
-        title: "Product Added",
-        description: `${formData.name} has been added`,
+      addProductMutation.mutate(payload, {
+        onSuccess: () => {
+          toast({
+            title: "Product Added",
+            description: `${formData.name} has been added`,
+          });
+          resetForm();
+        },
+        onError: (error) => {
+          toast({
+            title: "Error Adding Product",
+            description: error.message,
+            variant: "destructive",
+          });
+        }
       });
     }
-
-    resetForm();
   };
 
   const resetForm = () => {
@@ -198,6 +216,16 @@ export default function ProductsPage() {
     setSelectedProduct(null);
     setIsDialogOpen(false);
   };
+
+  if (isLoading) {
+    return (
+      <div className="flex items-center justify-center h-96">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    );
+  }
+
+  const isSaving = addProductMutation.isPending || updateProductMutation.isPending;
 
   return (
     <div className="p-6 space-y-6">
@@ -359,10 +387,11 @@ export default function ProductsPage() {
           </div>
 
           <DialogFooter>
-            <Button variant="outline" onClick={resetForm}>
+            <Button variant="outline" onClick={resetForm} disabled={isSaving}>
               Cancel
             </Button>
-            <Button onClick={handleSubmit} data-testid="button-submit-product">
+            <Button onClick={handleSubmit} disabled={isSaving} data-testid="button-submit-product">
+              {isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
               {selectedProduct ? "Update" : "Add"} Product
             </Button>
           </DialogFooter>

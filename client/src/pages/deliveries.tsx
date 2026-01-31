@@ -1,18 +1,19 @@
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { 
-  Calendar, 
-  Truck, 
-  Check, 
-  X, 
-  Clock, 
-  MapPin, 
-  Phone, 
+import {
+  Calendar,
+  Truck,
+  Check,
+  X,
+  Clock,
+  MapPin,
+  Phone,
   Download,
   CheckCircle,
   XCircle,
-  AlertCircle
+  AlertCircle,
+  Loader2
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -27,141 +28,96 @@ import {
 } from "@/components/ui/select";
 import { PageHeader } from "@/components/PageHeader";
 import { StatusBadge } from "@/components/StatusBadge";
-import { LoadingSpinner } from "@/components/LoadingSpinner";
 import { useToast } from "@/hooks/use-toast";
-import { useDeliveries, useCustomers, useRoutes } from "@/hooks/useData";
+import { useDeliveries, useUpdateDelivery } from "@/hooks/useData";
 import type { Delivery, DeliveryStatus } from "@shared/types";
 
-interface DeliveryWithCustomer extends Delivery {
-  customerName: string;
-  customerPhone: string;
-  customerArea: string;
-  items: { product: string; quantity: number; price: number }[];
-}
-
-const sampleDeliveries: DeliveryWithCustomer[] = [
-  {
-    id: "1",
-    customer_id: "1",
-    customerName: "Sharma Family",
-    customerPhone: "9876543210",
-    customerArea: "Sector 12",
-    delivery_date: "2024-01-30",
-    status: "pending",
-    created_at: "2024-01-30",
-    items: [
-      { product: "Full Cream Milk", quantity: 2, price: 65 },
-      { product: "Dahi", quantity: 0.5, price: 60 },
-    ],
-  },
-  {
-    id: "2",
-    customer_id: "2",
-    customerName: "Gupta Residence",
-    customerPhone: "9876543211",
-    customerArea: "Model Town",
-    delivery_date: "2024-01-30",
-    status: "delivered",
-    delivery_time: "2024-01-30T06:30:00",
-    created_at: "2024-01-30",
-    items: [{ product: "Toned Milk", quantity: 1.5, price: 55 }],
-  },
-  {
-    id: "3",
-    customer_id: "3",
-    customerName: "Singh House",
-    customerPhone: "9876543212",
-    customerArea: "Civil Lines",
-    delivery_date: "2024-01-30",
-    status: "pending",
-    created_at: "2024-01-30",
-    items: [
-      { product: "Buffalo Milk", quantity: 3, price: 80 },
-      { product: "Paneer", quantity: 0.25, price: 350 },
-    ],
-  },
-  {
-    id: "4",
-    customer_id: "4",
-    customerName: "Verma Dairy Store",
-    customerPhone: "9876543213",
-    customerArea: "Main Market",
-    delivery_date: "2024-01-30",
-    status: "delivered",
-    delivery_time: "2024-01-30T05:45:00",
-    created_at: "2024-01-30",
-    items: [
-      { product: "Full Cream Milk", quantity: 10, price: 65 },
-      { product: "Toned Milk", quantity: 5, price: 55 },
-    ],
-  },
-  {
-    id: "5",
-    customer_id: "5",
-    customerName: "Patel Family",
-    customerPhone: "9876543214",
-    customerArea: "Sector 12",
-    delivery_date: "2024-01-30",
-    status: "missed",
-    notes: "Customer not available",
-    created_at: "2024-01-30",
-    items: [{ product: "Full Cream Milk", quantity: 1, price: 65 }],
-  },
-];
-
 export default function DeliveriesPage() {
-  const [deliveries, setDeliveries] = useState<DeliveryWithCustomer[]>(sampleDeliveries);
+  const { data: deliveriesData, isLoading } = useDeliveries();
+  const updateDeliveryMutation = useUpdateDelivery();
+  const { toast } = useToast();
+
   const [selectedDate, setSelectedDate] = useState(format(new Date(), "yyyy-MM-dd"));
   const [filterStatus, setFilterStatus] = useState<string>("all");
   const [filterArea, setFilterArea] = useState<string>("all");
-  const { toast } = useToast();
 
-  const areas = Array.from(new Set(deliveries.map((d) => d.customerArea)));
+  const deliveries = deliveriesData || [];
 
-  const filteredDeliveries = deliveries.filter((d) => {
-    const matchesStatus = filterStatus === "all" || d.status === filterStatus;
-    const matchesArea = filterArea === "all" || d.customerArea === filterArea;
-    return matchesStatus && matchesArea;
-  });
+  // Get unique areas from deliveries for filter
+  const areas = useMemo(() => {
+    const areaSet = new Set<string>();
+    deliveries.forEach(d => {
+      if (d.customer?.area) areaSet.add(d.customer.area);
+    });
+    return Array.from(areaSet);
+  }, [deliveries]);
 
-  const stats = {
-    total: deliveries.length,
-    pending: deliveries.filter((d) => d.status === "pending").length,
-    delivered: deliveries.filter((d) => d.status === "delivered").length,
-    missed: deliveries.filter((d) => d.status === "missed").length,
-  };
+  const filteredDeliveries = useMemo(() => {
+    return deliveries.filter((d) => {
+      // Filter by date
+      const dateMatch = d.delivery_date === selectedDate;
+      if (!dateMatch) return false;
+
+      const matchesStatus = filterStatus === "all" || d.status === filterStatus;
+      const matchesArea = filterArea === "all" || d.customer?.area === filterArea;
+      return matchesStatus && matchesArea;
+    });
+  }, [deliveries, selectedDate, filterStatus, filterArea]);
+
+  const stats = useMemo(() => {
+    // Stats for Selected Date
+    const todaysDeliveries = deliveries.filter(d => d.delivery_date === selectedDate);
+    return {
+      total: todaysDeliveries.length,
+      pending: todaysDeliveries.filter((d) => d.status === "pending").length,
+      delivered: todaysDeliveries.filter((d) => d.status === "delivered").length,
+      missed: todaysDeliveries.filter((d) => d.status === "missed").length,
+    };
+  }, [deliveries, selectedDate]);
 
   const updateStatus = (id: string, status: DeliveryStatus) => {
-    setDeliveries((prev) =>
-      prev.map((d) =>
-        d.id === id
-          ? {
-              ...d,
-              status,
-              delivery_time: status === "delivered" ? new Date().toISOString() : d.delivery_time,
-            }
-          : d
-      )
-    );
-    toast({
-      title: "Status Updated",
-      description: `Delivery marked as ${status}`,
+    const deliveryTime = status === "delivered" ? new Date().toISOString() : undefined;
+
+    updateDeliveryMutation.mutate({
+      id,
+      status,
+      delivery_time: deliveryTime
+    }, {
+      onSuccess: () => {
+        toast({
+          title: "Status Updated",
+          description: `Delivery marked as ${status}`,
+        });
+      },
+      onError: (error) => {
+        toast({
+          title: "Error",
+          description: error.message,
+          variant: "destructive"
+        });
+      }
     });
   };
 
   const markAllDelivered = () => {
-    setDeliveries((prev) =>
-      prev.map((d) =>
-        d.status === "pending"
-          ? { ...d, status: "delivered" as DeliveryStatus, delivery_time: new Date().toISOString() }
-          : d
-      )
-    );
-    toast({
-      title: "All Delivered",
-      description: "All pending deliveries marked as delivered",
+    // Get all pending deliveries for current view
+    const pendingDeliveries = filteredDeliveries.filter(d => d.status === "pending");
+
+    if (pendingDeliveries.length === 0) {
+      toast({ title: "No Pending Deliveries", description: "All deliveries are already processed." });
+      return;
+    }
+
+    // Process sequentially effectively (could be bulk API)
+    // For now we just iterate. In real world, use a bulk update API.
+    pendingDeliveries.forEach(d => {
+      updateStatus(d.id, "delivered");
     });
   };
+
+  if (isLoading) {
+    return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -226,7 +182,7 @@ export default function DeliveriesPage() {
       >
         <Card className="hover-elevate cursor-pointer" onClick={() => setFilterStatus("all")}>
           <CardContent className="p-4">
-            <p className="text-sm text-muted-foreground">Total</p>
+            <p className="text-sm text-muted-foreground">Total (Today)</p>
             <p className="text-2xl font-bold text-primary">{stats.total}</p>
           </CardContent>
         </Card>
@@ -270,7 +226,8 @@ export default function DeliveriesPage() {
           <Card>
             <CardContent className="py-12 text-center">
               <Truck className="h-12 w-12 mx-auto mb-4 text-muted-foreground opacity-20" />
-              <p className="text-muted-foreground">No deliveries found for the selected filters</p>
+              <p className="text-muted-foreground">No deliveries found for {format(new Date(selectedDate), "dd MMM yyyy")}</p>
+              <p className="text-xs text-muted-foreground mt-2">Adjust date or filters to see records</p>
             </CardContent>
           </Card>
         ) : (
@@ -283,20 +240,24 @@ export default function DeliveriesPage() {
                     <div className="flex items-center gap-3 mb-2">
                       <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
                         <span className="text-sm font-bold text-primary">
-                          {delivery.customerName.charAt(0)}
+                          {delivery.customer?.name?.charAt(0) || "?"}
                         </span>
                       </div>
                       <div>
-                        <h3 className="font-medium">{delivery.customerName}</h3>
+                        <h3 className="font-medium">{delivery.customer?.name || "Unknown Customer"}</h3>
                         <div className="flex items-center gap-3 text-sm text-muted-foreground">
-                          <span className="flex items-center gap-1">
-                            <Phone className="h-3 w-3" />
-                            {delivery.customerPhone}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {delivery.customerArea}
-                          </span>
+                          {delivery.customer?.phone && (
+                            <span className="flex items-center gap-1">
+                              <Phone className="h-3 w-3" />
+                              {delivery.customer.phone}
+                            </span>
+                          )}
+                          {delivery.customer?.area && (
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {delivery.customer.area}
+                            </span>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -305,24 +266,26 @@ export default function DeliveriesPage() {
                   {/* Items */}
                   <div className="flex-1">
                     <div className="flex flex-wrap gap-2">
-                      {delivery.items.map((item, idx) => (
+                      {delivery.delivery_items?.map((item, idx) => (
                         <Badge key={idx} variant="secondary" className="text-xs">
-                          {item.product}: {item.quantity} × ₹{item.price}
+                          {item.product?.name || "Item"}: {item.quantity} × ₹{item.unit_price}
                         </Badge>
                       ))}
                     </div>
-                    <p className="text-sm font-medium mt-1 text-primary">
-                      Total: ₹
-                      {delivery.items
-                        .reduce((sum, item) => sum + item.quantity * item.price, 0)
-                        .toLocaleString("en-IN")}
-                    </p>
+                    {delivery.delivery_items && delivery.delivery_items.length > 0 && (
+                      <p className="text-sm font-medium mt-1 text-primary">
+                        Total: ₹
+                        {delivery.delivery_items
+                          .reduce((sum, item) => sum + (item.quantity * item.unit_price), 0)
+                          .toLocaleString("en-IN")}
+                      </p>
+                    )}
                   </div>
 
                   {/* Status and Actions */}
                   <div className="flex items-center gap-3">
                     <StatusBadge status={delivery.status} type="delivery" />
-                    
+
                     {delivery.status === "pending" && (
                       <div className="flex gap-2">
                         <Button
@@ -330,6 +293,7 @@ export default function DeliveriesPage() {
                           variant="outline"
                           className="text-green-600 hover:bg-green-50"
                           onClick={() => updateStatus(delivery.id, "delivered")}
+                          disabled={updateDeliveryMutation.isPending}
                           data-testid={`button-deliver-${delivery.id}`}
                         >
                           <Check className="h-4 w-4" />
@@ -339,6 +303,7 @@ export default function DeliveriesPage() {
                           variant="outline"
                           className="text-red-600 hover:bg-red-50"
                           onClick={() => updateStatus(delivery.id, "missed")}
+                          disabled={updateDeliveryMutation.isPending}
                           data-testid={`button-miss-${delivery.id}`}
                         >
                           <X className="h-4 w-4" />

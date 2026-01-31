@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import { format } from "date-fns";
-import { Plus, Wrench, AlertTriangle, Download, Edit, Trash2, Settings } from "lucide-react";
+import { Plus, Wrench, AlertTriangle, Download, Edit, Trash2, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -15,34 +15,40 @@ import { DataTable, Column, Action } from "@/components/DataTable";
 import { StatusBadge } from "@/components/StatusBadge";
 import { useToast } from "@/hooks/use-toast";
 import type { Equipment, EquipmentStatus } from "@shared/types";
-
-const sampleEquipment: Equipment[] = [
-  { id: "1", name: "Milking Machine - Unit 1", category: "Milking", model: "DeLaval VMS", serial_number: "DL-2023-001", purchase_date: "2023-01-15", purchase_cost: 250000, warranty_expiry: "2026-01-15", status: "active", location: "Milking Parlor", created_at: "2023-01-15" },
-  { id: "2", name: "Bulk Milk Cooler", category: "Storage", model: "500L Capacity", purchase_date: "2022-06-20", purchase_cost: 180000, status: "active", location: "Milk Storage", created_at: "2022-06-20" },
-  { id: "3", name: "Fodder Cutter", category: "Processing", model: "Chaff Cutter 5HP", purchase_date: "2021-03-10", purchase_cost: 45000, status: "maintenance", location: "Feed Room", notes: "Blade replacement needed", created_at: "2021-03-10" },
-  { id: "4", name: "Water Pump - Main", category: "Utility", model: "1HP Submersible", purchase_date: "2020-08-25", purchase_cost: 12000, status: "active", location: "Well", created_at: "2020-08-25" },
-  { id: "5", name: "Old Generator", category: "Utility", model: "5KVA Diesel", purchase_date: "2018-01-01", purchase_cost: 80000, status: "retired", created_at: "2018-01-01" },
-];
+import { useEquipment, useAddEquipment, useUpdateEquipment, useDeleteEquipment } from "@/hooks/useData";
 
 const categories = ["Milking", "Storage", "Processing", "Utility", "Transport", "Other"];
 
 export default function EquipmentPage() {
-  const [equipment, setEquipment] = useState<Equipment[]>(sampleEquipment);
+  const { data: equipmentData, isLoading } = useEquipment();
+  const addMutation = useAddEquipment();
+  const updateMutation = useUpdateEquipment();
+  const deleteMutation = useDeleteEquipment();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [selectedEquipment, setSelectedEquipment] = useState<Equipment | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({ name: "", category: "Milking", model: "", serial_number: "", purchase_date: "", purchase_cost: "", warranty_expiry: "", status: "active" as EquipmentStatus, location: "", notes: "" });
 
-  const stats = { total: equipment.length, active: equipment.filter(e => e.status === "active").length, maintenance: equipment.filter(e => e.status === "maintenance").length, totalValue: equipment.reduce((sum, e) => sum + (e.purchase_cost || 0), 0) };
+  const equipment = equipmentData || [];
+
+  const stats = {
+    total: equipment.length,
+    active: equipment.filter(e => e.status === "active").length,
+    maintenance: equipment.filter(e => e.status === "maintenance").length,
+    totalValue: equipment.reduce((sum, e) => sum + (e.purchase_cost || 0), 0)
+  };
 
   const columns: Column<Equipment>[] = [
-    { key: "name", header: "Equipment", sortable: true, render: (item) => (
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Wrench className="h-5 w-5 text-primary" /></div>
-        <div><span className="font-medium">{item.name}</span>{item.model && <p className="text-xs text-muted-foreground">{item.model}</p>}</div>
-      </div>
-    ) },
+    {
+      key: "name", header: "Equipment", sortable: true, render: (item) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Wrench className="h-5 w-5 text-primary" /></div>
+          <div><span className="font-medium">{item.name}</span>{item.model && <p className="text-xs text-muted-foreground">{item.model}</p>}</div>
+        </div>
+      )
+    },
     { key: "category", header: "Category", render: (item) => <Badge variant="outline">{item.category}</Badge> },
     { key: "status", header: "Status", render: (item) => <StatusBadge status={item.status} type="equipment" /> },
     { key: "location", header: "Location", render: (item) => item.location || "-" },
@@ -51,24 +57,56 @@ export default function EquipmentPage() {
   ];
 
   const actions: Action<Equipment>[] = [
-    { label: "Edit", onClick: (item) => { setSelectedEquipment(item); setFormData({ name: item.name, category: item.category, model: item.model || "", serial_number: item.serial_number || "", purchase_date: item.purchase_date || "", purchase_cost: item.purchase_cost?.toString() || "", warranty_expiry: item.warranty_expiry || "", status: item.status, location: item.location || "", notes: item.notes || "" }); setIsDialogOpen(true); }, icon: Edit },
-    { label: "Delete", onClick: (item) => { setEquipment(prev => prev.filter(e => e.id !== item.id)); toast({ title: "Equipment Deleted" }); }, icon: Trash2, variant: "destructive" },
+    {
+      label: "Edit",
+      onClick: (item) => {
+        setSelectedEquipment(item);
+        setFormData({ name: item.name, category: item.category, model: item.model || "", serial_number: item.serial_number || "", purchase_date: item.purchase_date || "", purchase_cost: item.purchase_cost?.toString() || "", warranty_expiry: item.warranty_expiry || "", status: item.status, location: item.location || "", notes: item.notes || "" });
+        setIsDialogOpen(true);
+      },
+      icon: Edit
+    },
+    {
+      label: "Delete",
+      onClick: (item) => {
+        deleteMutation.mutate(item.id, {
+          onSuccess: () => toast({ title: "Equipment Deleted" }),
+          onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" })
+        });
+      },
+      icon: Trash2,
+      variant: "destructive"
+    },
   ];
 
   const handleSubmit = () => {
     if (!formData.name) { toast({ title: "Validation Error", description: "Please enter equipment name", variant: "destructive" }); return; }
+
+    const payload = {
+      ...formData,
+      purchase_cost: formData.purchase_cost ? parseFloat(formData.purchase_cost) : undefined
+    };
+
     if (selectedEquipment) {
-      setEquipment(prev => prev.map(e => e.id === selectedEquipment.id ? { ...e, ...formData, purchase_cost: formData.purchase_cost ? parseFloat(formData.purchase_cost) : undefined } : e));
-      toast({ title: "Equipment Updated" });
+      updateMutation.mutate({ id: selectedEquipment.id, ...payload }, {
+        onSuccess: () => { toast({ title: "Equipment Updated" }); resetForm(); },
+        onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" })
+      });
     } else {
-      const newEquipment: Equipment = { id: Date.now().toString(), ...formData, purchase_cost: formData.purchase_cost ? parseFloat(formData.purchase_cost) : undefined, created_at: new Date().toISOString() };
-      setEquipment(prev => [...prev, newEquipment]);
-      toast({ title: "Equipment Added" });
+      addMutation.mutate(payload, {
+        onSuccess: () => { toast({ title: "Equipment Added" }); resetForm(); },
+        onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" })
+      });
     }
-    resetForm();
   };
 
   const resetForm = () => { setFormData({ name: "", category: "Milking", model: "", serial_number: "", purchase_date: "", purchase_cost: "", warranty_expiry: "", status: "active", location: "", notes: "" }); setSelectedEquipment(null); setIsDialogOpen(false); };
+
+  const isSaving = addMutation.isPending || updateMutation.isPending || deleteMutation.isPending;
+
+  if (isLoading) {
+    return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -91,26 +129,29 @@ export default function EquipmentPage() {
         <DialogContent className="max-w-lg">
           <DialogHeader><DialogTitle>{selectedEquipment ? "Edit Equipment" : "Add Equipment"}</DialogTitle><DialogDescription>Manage equipment details</DialogDescription></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2"><Label>Equipment Name *</Label><Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g., Milking Machine" /></div>
+            <div className="space-y-2"><Label>Equipment Name *</Label><Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Milking Machine" /></div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Category</Label><Select value={formData.category} onValueChange={(v) => setFormData({...formData, category: v})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
-              <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({...formData, status: v as EquipmentStatus})}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="maintenance">Maintenance</SelectItem><SelectItem value="retired">Retired</SelectItem></SelectContent></Select></div>
+              <div className="space-y-2"><Label>Category</Label><Select value={formData.category} onValueChange={(v) => setFormData({ ...formData, category: v })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent>{categories.map(c => <SelectItem key={c} value={c}>{c}</SelectItem>)}</SelectContent></Select></div>
+              <div className="space-y-2"><Label>Status</Label><Select value={formData.status} onValueChange={(v) => setFormData({ ...formData, status: v as EquipmentStatus })}><SelectTrigger><SelectValue /></SelectTrigger><SelectContent><SelectItem value="active">Active</SelectItem><SelectItem value="maintenance">Maintenance</SelectItem><SelectItem value="retired">Retired</SelectItem></SelectContent></Select></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Model</Label><Input value={formData.model} onChange={(e) => setFormData({...formData, model: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Serial Number</Label><Input value={formData.serial_number} onChange={(e) => setFormData({...formData, serial_number: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Model</Label><Input value={formData.model} onChange={(e) => setFormData({ ...formData, model: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Serial Number</Label><Input value={formData.serial_number} onChange={(e) => setFormData({ ...formData, serial_number: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Purchase Date</Label><Input type="date" value={formData.purchase_date} onChange={(e) => setFormData({...formData, purchase_date: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Purchase Cost (₹)</Label><Input type="number" value={formData.purchase_cost} onChange={(e) => setFormData({...formData, purchase_cost: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Purchase Date</Label><Input type="date" value={formData.purchase_date} onChange={(e) => setFormData({ ...formData, purchase_date: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Purchase Cost (₹)</Label><Input type="number" value={formData.purchase_cost} onChange={(e) => setFormData({ ...formData, purchase_cost: e.target.value })} /></div>
             </div>
             <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2"><Label>Warranty Expiry</Label><Input type="date" value={formData.warranty_expiry} onChange={(e) => setFormData({...formData, warranty_expiry: e.target.value})} /></div>
-              <div className="space-y-2"><Label>Location</Label><Input value={formData.location} onChange={(e) => setFormData({...formData, location: e.target.value})} /></div>
+              <div className="space-y-2"><Label>Warranty Expiry</Label><Input type="date" value={formData.warranty_expiry} onChange={(e) => setFormData({ ...formData, warranty_expiry: e.target.value })} /></div>
+              <div className="space-y-2"><Label>Location</Label><Input value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} /></div>
             </div>
-            <div className="space-y-2"><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({...formData, notes: e.target.value})} placeholder="Additional notes..." /></div>
+            <div className="space-y-2"><Label>Notes</Label><Textarea value={formData.notes} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} placeholder="Additional notes..." /></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={resetForm}>Cancel</Button><Button onClick={handleSubmit}>{selectedEquipment ? "Update" : "Add"} Equipment</Button></DialogFooter>
+          <DialogFooter>
+            <Button variant="outline" onClick={resetForm} disabled={isSaving}>Cancel</Button>
+            <Button onClick={handleSubmit} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}{selectedEquipment ? "Update" : "Add"} Equipment</Button>
+          </DialogFooter>
         </DialogContent>
       </Dialog>
     </div>

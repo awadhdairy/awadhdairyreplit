@@ -4,11 +4,11 @@ import { format, subDays, startOfMonth, endOfMonth } from "date-fns";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import * as XLSX from "xlsx";
-import { 
-  Plus, 
-  Eye, 
-  Download, 
-  IndianRupee, 
+import {
+  Plus,
+  Eye,
+  Download,
+  IndianRupee,
   Calendar,
   FileText,
   Printer,
@@ -82,15 +82,7 @@ const COMPANY_INFO = {
   gstin: "09XXXXX1234X1ZX",
 };
 
-const DEMO_DELIVERY_ITEMS = [
-  { delivery_id: '1', product_id: '1', product_name: 'Fresh Cow Milk', quantity: 5, unit_price: 60 },
-  { delivery_id: '1', product_id: '3', product_name: 'Fresh Curd', quantity: 1, unit_price: 80 },
-  { delivery_id: '2', product_id: '1', product_name: 'Fresh Cow Milk', quantity: 3, unit_price: 60 },
-  { delivery_id: '3', product_id: '1', product_name: 'Fresh Cow Milk', quantity: 10, unit_price: 60 },
-  { delivery_id: '3', product_id: '5', product_name: 'Fresh Paneer', quantity: 2, unit_price: 320 },
-  { delivery_id: '4', product_id: '1', product_name: 'Fresh Cow Milk', quantity: 4, unit_price: 60 },
-  { delivery_id: '5', product_id: '2', product_name: 'Pasteurized Milk', quantity: 8, unit_price: 65 },
-];
+
 
 export default function BillingPage() {
   const { data: invoicesData, isLoading: invoicesLoading } = useInvoices();
@@ -99,7 +91,7 @@ export default function BillingPage() {
   const { data: productsData } = useProducts();
   const addInvoiceMutation = useAddInvoice();
   const updateInvoiceMutation = useUpdateInvoice();
-  
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [isPaymentDialogOpen, setIsPaymentDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
@@ -135,7 +127,7 @@ export default function BillingPage() {
 
   useEffect(() => {
     if (formData.customer_id && formData.billing_period_start && formData.billing_period_end) {
-      const customerDeliveries = deliveries.filter(d => 
+      const customerDeliveries = deliveries.filter(d =>
         d.customer_id === formData.customer_id &&
         d.delivery_date >= formData.billing_period_start &&
         d.delivery_date <= formData.billing_period_end &&
@@ -145,15 +137,24 @@ export default function BillingPage() {
       const productTotals: Record<string, { product_name: string; quantity: number; unit_price: number; unit: string }> = {};
 
       customerDeliveries.forEach(delivery => {
-        const deliveryItems = DEMO_DELIVERY_ITEMS.filter(item => item.delivery_id === delivery.id);
+        const deliveryItems = delivery.delivery_items || [];
         deliveryItems.forEach(item => {
+          // item.products is joined by Supabase, typed as item.product in frontend if we map it?
+          // The API return type is 'any' mapped to Delivery[] in api.ts?
+          // No, api.ts fetchDeliveries just returns data from api.deliveries.getAll currently.
+          // We need to handle the joined data.
+          // Let's assume item.products object exists or we use item.product_id to find name from products list.
+
           const product = products.find(p => p.id === item.product_id);
+          // If joined data is available: (item as any).products?.name
+          const productName = (item as any).products?.name || product?.name || 'Unknown Product';
+
           const key = item.product_id;
           if (!productTotals[key]) {
             productTotals[key] = {
-              product_name: item.product_name,
+              product_name: productName,
               quantity: 0,
-              unit_price: item.unit_price,
+              unit_price: item.unit_price || product?.price_per_unit || 0,
               unit: product?.unit || 'units'
             };
           }
@@ -211,8 +212,8 @@ export default function BillingPage() {
     });
   }, [invoices, customers]);
 
-  const filteredInvoices = filterStatus === "all" 
-    ? invoicesWithCustomer 
+  const filteredInvoices = filterStatus === "all"
+    ? invoicesWithCustomer
     : invoicesWithCustomer.filter((i) => i.payment_status === filterStatus);
 
   const stats = useMemo(() => ({
@@ -360,7 +361,7 @@ export default function BillingPage() {
     }
 
     const invoiceNumber = `AWD-${new Date().getFullYear()}-${String(invoices.length + 1).padStart(3, '0')}`;
-    
+
     const newInvoice: Omit<Invoice, 'id'> = {
       invoice_number: invoiceNumber,
       customer_id: formData.customer_id,
@@ -439,59 +440,59 @@ export default function BillingPage() {
   const handleDownloadPDF = (invoice: InvoiceWithCustomer) => {
     const doc = new jsPDF();
     const pageWidth = doc.internal.pageSize.getWidth();
-    
+
     doc.setFillColor(34, 139, 34);
     doc.rect(0, 0, pageWidth, 45, 'F');
-    
+
     doc.setTextColor(255, 255, 255);
     doc.setFontSize(24);
     doc.setFont('helvetica', 'bold');
     doc.text(COMPANY_INFO.name, pageWidth / 2, 20, { align: 'center' });
-    
+
     doc.setFontSize(10);
     doc.setFont('helvetica', 'normal');
     doc.text(COMPANY_INFO.tagline, pageWidth / 2, 28, { align: 'center' });
     doc.text(`${COMPANY_INFO.email} | ${COMPANY_INFO.phone}`, pageWidth / 2, 35, { align: 'center' });
     doc.text(COMPANY_INFO.address, pageWidth / 2, 42, { align: 'center' });
-    
+
     doc.setTextColor(200, 200, 200);
     doc.setFontSize(60);
     doc.setFont('helvetica', 'bold');
     doc.text('AWADH DAIRY', pageWidth / 2, 150, { align: 'center', angle: 45 });
-    
+
     doc.setTextColor(34, 139, 34);
     doc.setFontSize(18);
     doc.text('TAX INVOICE', pageWidth / 2, 60, { align: 'center' });
-    
+
     doc.setTextColor(0, 0, 0);
     doc.setFontSize(10);
     doc.setFont('helvetica', 'bold');
     doc.text('Invoice Number:', 14, 75);
     doc.setFont('helvetica', 'normal');
     doc.text(invoice.invoice_number, 50, 75);
-    
+
     doc.setFont('helvetica', 'bold');
     doc.text('Date:', 14, 82);
     doc.setFont('helvetica', 'normal');
     doc.text(format(new Date(invoice.created_at), "dd MMM yyyy"), 50, 82);
-    
+
     doc.setFont('helvetica', 'bold');
     doc.text('Due Date:', 14, 89);
     doc.setFont('helvetica', 'normal');
     doc.text(invoice.due_date ? format(new Date(invoice.due_date), "dd MMM yyyy") : "N/A", 50, 89);
-    
+
     doc.setFont('helvetica', 'bold');
     doc.text('Bill To:', 120, 75);
     doc.setFont('helvetica', 'normal');
     doc.text(invoice.customerName, 120, 82);
     doc.text(invoice.customerPhone || '', 120, 89);
     doc.text(invoice.customerAddress || '', 120, 96);
-    
+
     doc.setFont('helvetica', 'bold');
     doc.text('Billing Period:', 14, 96);
     doc.setFont('helvetica', 'normal');
     doc.text(`${format(new Date(invoice.billing_period_start), "dd MMM yyyy")} - ${format(new Date(invoice.billing_period_end), "dd MMM yyyy")}`, 50, 96);
-    
+
     autoTable(doc, {
       startY: 110,
       head: [['Description', 'Qty', 'Rate (₹)', 'Amount (₹)']],
@@ -509,9 +510,9 @@ export default function BillingPage() {
       footStyles: { fillColor: [240, 240, 240], textColor: 0, fontStyle: 'bold' },
       theme: 'grid',
     });
-    
+
     const finalY = (doc as any).lastAutoTable.finalY || 180;
-    
+
     doc.setFillColor(245, 245, 245);
     doc.roundedRect(14, finalY + 10, 80, 35, 3, 3, 'F');
     doc.setTextColor(34, 139, 34);
@@ -523,14 +524,14 @@ export default function BillingPage() {
     doc.text(COMPANY_INFO.upi_id, 20, finalY + 28);
     doc.setFontSize(8);
     doc.text('Scan or click UPI link in digital invoice', 20, finalY + 36);
-    
+
     doc.setTextColor(100, 100, 100);
     doc.setFontSize(9);
     doc.text('Thank you for your business!', pageWidth / 2, finalY + 55, { align: 'center' });
     doc.text('For queries, contact us at ' + COMPANY_INFO.email, pageWidth / 2, finalY + 62, { align: 'center' });
-    
+
     doc.save(`Invoice_${invoice.invoice_number}.pdf`);
-    
+
     toast({
       title: "PDF Downloaded",
       description: `Invoice ${invoice.invoice_number} downloaded successfully`,
@@ -540,7 +541,7 @@ export default function BillingPage() {
   const handlePrint = (invoice: InvoiceWithCustomer) => {
     const balanceDue = (invoice.final_amount || 0) - (invoice.paid_amount || 0);
     const upiLink = generateUPILink(balanceDue, invoice.invoice_number);
-    
+
     const printWindow = window.open('', '_blank');
     if (!printWindow) {
       toast({
@@ -716,7 +717,7 @@ export default function BillingPage() {
 
     printWindow.document.write(printContent);
     printWindow.document.close();
-    
+
     toast({
       title: "Print Initiated",
       description: `Printing invoice ${invoice.invoice_number}`,
@@ -744,7 +745,7 @@ export default function BillingPage() {
     const worksheet = XLSX.utils.json_to_sheet(exportData);
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Invoices");
-    
+
     const colWidths = [
       { wch: 18 }, { wch: 20 }, { wch: 15 }, { wch: 15 }, { wch: 15 },
       { wch: 12 }, { wch: 12 }, { wch: 10 }, { wch: 12 }, { wch: 12 },
@@ -786,7 +787,7 @@ export default function BillingPage() {
       </PageHeader>
 
       {/* Stats Cards - Modern gradient cards */}
-      <motion.div 
+      <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="grid grid-cols-2 md:grid-cols-4 gap-3 md:gap-4"
@@ -950,8 +951,8 @@ export default function BillingPage() {
                           <tr key={item.id} className={idx % 2 === 0 ? 'bg-muted/30' : ''}>
                             <td className="p-2">
                               {editingItemId === item.id ? (
-                                <Input 
-                                  value={item.description} 
+                                <Input
+                                  value={item.description}
                                   onChange={(e) => handleUpdateItem(item.id, { description: e.target.value })}
                                   className="h-8"
                                 />
@@ -966,9 +967,9 @@ export default function BillingPage() {
                             </td>
                             <td className="p-2 text-center">
                               {editingItemId === item.id ? (
-                                <Input 
-                                  type="number" 
-                                  value={item.quantity} 
+                                <Input
+                                  type="number"
+                                  value={item.quantity}
                                   onChange={(e) => handleUpdateItem(item.id, { quantity: parseFloat(e.target.value) || 0 })}
                                   className="h-8 text-center w-16"
                                 />
@@ -978,9 +979,9 @@ export default function BillingPage() {
                             </td>
                             <td className="p-2 text-center">
                               {editingItemId === item.id ? (
-                                <Input 
-                                  type="number" 
-                                  value={item.rate} 
+                                <Input
+                                  type="number"
+                                  value={item.rate}
                                   onChange={(e) => handleUpdateItem(item.id, { rate: parseFloat(e.target.value) || 0 })}
                                   className="h-8 text-center w-20"
                                 />
@@ -1251,7 +1252,7 @@ export default function BillingPage() {
                           <p className="text-sm text-muted-foreground font-mono">{COMPANY_INFO.upi_id}</p>
                         </div>
                       </div>
-                      <a 
+                      <a
                         href={generateUPILink((selectedInvoice.final_amount || 0) - (selectedInvoice.paid_amount || 0), selectedInvoice.invoice_number)}
                         className="inline-flex items-center gap-2 bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium hover:bg-primary/90 transition-colors"
                         data-testid="link-pay-upi"
@@ -1280,7 +1281,7 @@ export default function BillingPage() {
             <Button variant="outline" onClick={() => selectedInvoice && handlePrint(selectedInvoice)}>
               <Printer className="h-4 w-4 mr-2" /> Print
             </Button>
-            <Button 
+            <Button
               onClick={() => { setIsViewDialogOpen(false); setIsPaymentDialogOpen(true); }}
               disabled={(selectedInvoice?.final_amount || 0) <= (selectedInvoice?.paid_amount || 0)}
             >

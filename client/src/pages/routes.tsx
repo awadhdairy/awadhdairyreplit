@@ -1,6 +1,6 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { Plus, Route, MapPin, User, Download, Edit, Trash2 } from "lucide-react";
+import { Plus, Route as RouteIcon, MapPin, User, Download, Edit, Trash2, Loader2 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
@@ -13,57 +13,108 @@ import { Switch } from "@/components/ui/switch";
 import { PageHeader } from "@/components/PageHeader";
 import { DataTable, Column, Action } from "@/components/DataTable";
 import { useToast } from "@/hooks/use-toast";
-import type { DeliveryRoute } from "@shared/types";
-
-const sampleRoutes: DeliveryRoute[] = [
-  { id: "1", name: "Route A - Sector 12", description: "Morning route covering Sector 12 and nearby areas", assigned_staff: "Suresh Singh", is_active: true, created_at: "2024-01-01" },
-  { id: "2", name: "Route B - Model Town", description: "Model Town and Civil Lines delivery", assigned_staff: "Ramesh Kumar", is_active: true, created_at: "2024-01-01" },
-  { id: "3", name: "Route C - Main Market", description: "Commercial area and shops", assigned_staff: "Suresh Singh", is_active: true, created_at: "2024-01-01" },
-  { id: "4", name: "Route D - Industrial", description: "Industrial area - bulk deliveries", is_active: false, created_at: "2024-01-01" },
-];
-
-const staffOptions = ["Suresh Singh", "Ramesh Kumar", "Mohan Lal"];
+import type { Route } from "@shared/types";
+import { useRoutes, useEmployees, useAddRoute, useUpdateRoute, useDeleteRoute } from "@/hooks/useData";
 
 export default function RoutesPage() {
-  const [routes, setRoutes] = useState<DeliveryRoute[]>(sampleRoutes);
+  const { data: routesData, isLoading: isRoutesLoading } = useRoutes();
+  const { data: employeesData } = useEmployees();
+
+  const addRouteMutation = useAddRoute();
+  const updateRouteMutation = useUpdateRoute();
+  const deleteRouteMutation = useDeleteRoute();
+
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [selectedRoute, setSelectedRoute] = useState<DeliveryRoute | null>(null);
+  const [selectedRoute, setSelectedRoute] = useState<Route | null>(null);
   const { toast } = useToast();
 
   const [formData, setFormData] = useState({ name: "", description: "", assigned_staff: "", is_active: true });
 
-  const stats = { total: routes.length, active: routes.filter(r => r.is_active).length };
+  const routes = routesData || [];
+  const staffOptions = employeesData?.map(e => ({ name: e.name, id: e.id })) || [];
 
-  const columns: Column<DeliveryRoute>[] = [
-    { key: "name", header: "Route", sortable: true, render: (item) => (
-      <div className="flex items-center gap-3">
-        <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><Route className="h-5 w-5 text-primary" /></div>
-        <div><span className="font-medium">{item.name}</span>{item.description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{item.description}</p>}</div>
-      </div>
-    ) },
+  const stats = useMemo(() => ({
+    total: routes.length,
+    active: routes.filter(r => r.is_active).length
+  }), [routes]);
+
+  const columns: Column<Route>[] = [
+    {
+      key: "name", header: "Route", sortable: true, render: (item) => (
+        <div className="flex items-center gap-3">
+          <div className="w-10 h-10 rounded-lg bg-primary/10 flex items-center justify-center"><RouteIcon className="h-5 w-5 text-primary" /></div>
+          <div><span className="font-medium">{item.name}</span>{item.description && <p className="text-xs text-muted-foreground truncate max-w-[200px]">{item.description}</p>}</div>
+        </div>
+      )
+    },
     { key: "assigned_staff", header: "Assigned Staff", render: (item) => item.assigned_staff ? <Badge variant="outline" className="gap-1"><User className="h-3 w-3" />{item.assigned_staff}</Badge> : <span className="text-muted-foreground">Unassigned</span> },
     { key: "is_active", header: "Status", render: (item) => <Badge variant={item.is_active ? "default" : "secondary"}>{item.is_active ? "Active" : "Inactive"}</Badge> },
   ];
 
-  const actions: Action<DeliveryRoute>[] = [
-    { label: "Edit", onClick: (item) => { setSelectedRoute(item); setFormData({ name: item.name, description: item.description || "", assigned_staff: item.assigned_staff || "", is_active: item.is_active }); setIsDialogOpen(true); }, icon: Edit },
-    { label: "Delete", onClick: (item) => { setRoutes(prev => prev.filter(r => r.id !== item.id)); toast({ title: "Route Deleted" }); }, icon: Trash2, variant: "destructive" },
+  const actions: Action<Route>[] = [
+    {
+      label: "Edit",
+      onClick: (item) => {
+        setSelectedRoute(item);
+        setFormData({
+          name: item.name,
+          description: item.description || "",
+          assigned_staff: item.assigned_staff || "",
+          is_active: item.is_active !== false
+        });
+        setIsDialogOpen(true);
+      },
+      icon: Edit
+    },
+    {
+      label: "Delete",
+      onClick: (item) => {
+        if (confirm("Are you sure you want to delete this route?")) {
+          deleteRouteMutation.mutate(item.id, {
+            onSuccess: () => toast({ title: "Route Deleted" }),
+            onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" })
+          });
+        }
+      },
+      icon: Trash2,
+      variant: "destructive"
+    },
   ];
 
   const handleSubmit = () => {
     if (!formData.name) { toast({ title: "Validation Error", description: "Please enter route name", variant: "destructive" }); return; }
+
     if (selectedRoute) {
-      setRoutes(prev => prev.map(r => r.id === selectedRoute.id ? { ...r, ...formData } : r));
-      toast({ title: "Route Updated" });
+      updateRouteMutation.mutate({
+        id: selectedRoute.id,
+        name: formData.name,
+        description: formData.description || undefined,
+        assigned_staff: formData.assigned_staff || undefined,
+        is_active: formData.is_active
+      }, {
+        onSuccess: () => { toast({ title: "Route Updated" }); resetForm(); },
+        onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" })
+      });
     } else {
-      const newRoute: DeliveryRoute = { id: Date.now().toString(), ...formData, created_at: new Date().toISOString() };
-      setRoutes(prev => [...prev, newRoute]);
-      toast({ title: "Route Added" });
+      addRouteMutation.mutate({
+        name: formData.name,
+        description: formData.description || undefined,
+        assigned_staff: formData.assigned_staff || undefined,
+        is_active: formData.is_active
+      }, {
+        onSuccess: () => { toast({ title: "Route Added" }); resetForm(); },
+        onError: (e) => toast({ title: "Error", description: e.message, variant: "destructive" })
+      });
     }
-    resetForm();
   };
 
   const resetForm = () => { setFormData({ name: "", description: "", assigned_staff: "", is_active: true }); setSelectedRoute(null); setIsDialogOpen(false); };
+
+  const isSaving = addRouteMutation.isPending || updateRouteMutation.isPending;
+
+  if (isRoutesLoading) {
+    return <div className="flex h-96 items-center justify-center"><Loader2 className="h-8 w-8 animate-spin text-primary" /></div>;
+  }
 
   return (
     <div className="p-6 space-y-6">
@@ -84,12 +135,19 @@ export default function RoutesPage() {
         <DialogContent className="max-w-md">
           <DialogHeader><DialogTitle>{selectedRoute ? "Edit Route" : "Add Route"}</DialogTitle><DialogDescription>Manage delivery route details</DialogDescription></DialogHeader>
           <div className="grid gap-4 py-4">
-            <div className="space-y-2"><Label>Route Name *</Label><Input value={formData.name} onChange={(e) => setFormData({...formData, name: e.target.value})} placeholder="e.g., Route A - Sector 12" /></div>
-            <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description} onChange={(e) => setFormData({...formData, description: e.target.value})} placeholder="Route details..." /></div>
-            <div className="space-y-2"><Label>Assigned Staff</Label><Select value={formData.assigned_staff} onValueChange={(v) => setFormData({...formData, assigned_staff: v})}><SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger><SelectContent>{staffOptions.map(s => <SelectItem key={s} value={s}>{s}</SelectItem>)}</SelectContent></Select></div>
-            <div className="flex items-center justify-between"><Label>Active Status</Label><Switch checked={formData.is_active} onCheckedChange={(checked) => setFormData({...formData, is_active: checked})} /></div>
+            <div className="space-y-2"><Label>Route Name *</Label><Input value={formData.name} onChange={(e) => setFormData({ ...formData, name: e.target.value })} placeholder="e.g., Route A - Sector 12" /></div>
+            <div className="space-y-2"><Label>Description</Label><Textarea value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} placeholder="Route details..." /></div>
+            <div className="space-y-2"><Label>Assigned Staff</Label>
+              <Select value={formData.assigned_staff} onValueChange={(v) => setFormData({ ...formData, assigned_staff: v })}>
+                <SelectTrigger><SelectValue placeholder="Select staff" /></SelectTrigger>
+                <SelectContent>
+                  {staffOptions.map(s => <SelectItem key={s.id} value={s.name}>{s.name}</SelectItem>)}
+                </SelectContent>
+              </Select>
+            </div>
+            <div className="flex items-center justify-between"><Label>Active Status</Label><Switch checked={formData.is_active} onCheckedChange={(checked) => setFormData({ ...formData, is_active: checked })} /></div>
           </div>
-          <DialogFooter><Button variant="outline" onClick={resetForm}>Cancel</Button><Button onClick={handleSubmit}>{selectedRoute ? "Update" : "Add"} Route</Button></DialogFooter>
+          <DialogFooter><Button variant="outline" onClick={resetForm} disabled={isSaving}>Cancel</Button><Button onClick={handleSubmit} disabled={isSaving}>{isSaving && <Loader2 className="mr-2 h-4 w-4 animate-spin" />} {selectedRoute ? "Update" : "Add"} Route</Button></DialogFooter>
         </DialogContent>
       </Dialog>
     </div>
