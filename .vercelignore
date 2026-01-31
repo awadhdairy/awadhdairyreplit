@@ -13,5 +13,3 @@ script/
 # Ignore database files
 drizzle.config.ts
 
-# Ignore Replit-specific
-attached_assets/
